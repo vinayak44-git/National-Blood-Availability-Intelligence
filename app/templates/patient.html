@@ -1,21 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RaktSetu | Patient Tracking</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta name="description" content="RaktSetu Patient Tracking — live status of your hospital's blood request.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/portals.css">
+<style>
+.status-hero{text-align:center;padding:22px;border-radius:14px;margin-bottom:18px;border:1px solid var(--cream-border)}
+.status-hero.queued{background:linear-gradient(135deg,#fffbeb,#fef9e7);border-color:#fde68a}
+.status-hero.fulfilled{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border-color:#bbf7d0}
+.status-hero.dispatched{background:linear-gradient(135deg,#eff6ff,#e0f2fe);border-color:#bfdbfe}
+.status-hero.rejected{background:linear-gradient(135deg,#fff5f5,#fef2f2);border-color:#fecaca}
+.status-hero.pending_clinical_verification{background:var(--blood-light);border-color:rgba(192,24,43,.15)}
+.status-label{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px}
+.status-value{font-family:Outfit,sans-serif;font-size:26px;font-weight:800;margin-bottom:4px}
+.tl-event{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--cream-border)}
+.tl-event:last-child{border-bottom:none}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.tl-dot.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+.tl-dot.fail{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.15)}
+.tl-dot.pend{background:#d97706;box-shadow:0 0 0 3px rgba(217,119,6,.15)}
+.tl-time{font-size:10px;color:var(--text-muted);white-space:nowrap}
+.alloc-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--cream-border);border-radius:10px;margin-bottom:8px;background:var(--cream-highlight)}
+.bchip{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;background:var(--blood-light);color:var(--blood-accent);font-weight:800;font-size:10.5px;font-family:Outfit,sans-serif;flex-shrink:0}
+.search-row{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:18px;align-items:end}
+.spin-lg{display:none;margin:0 auto;width:28px;height:28px;border:3px solid var(--cream-border);border-top-color:var(--blood-accent);border-radius:50%;animation:spinL .8s linear infinite}
+@keyframes spinL{to{transform:rotate(360deg)}}
+.err-box{display:none;padding:11px 13px;border-radius:10px;background:#fff5f5;border:1px solid rgba(192,24,43,.18);color:var(--blood-accent);font-size:12px;margin-top:12px}
+</style>
 </head>
-<body><div class="ambient"></div>
+<body>
+<div class="ambient"></div>
 <div class="portal-shell">
-<aside class="portal-side"><div class="brand"><div class="brand-icon">🩸</div><div><h2>RaktSetu</h2><span>Patient Tracking</span></div></div>
-<div class="side-label">PATIENT / FAMILY</div><div class="side-links"><a class="active" href="/patient">⏱ Request Status</a><a href="#help">❓ Help</a></div>
-<div class="side-label">IMPORTANT</div><div class="side-links"><a href="/requester">🏥 Hospital Portal</a><a href="/login">🔐 Portal Login</a></div>
-<div class="side-footer">This view is for tracking an existing hospital request. Patients cannot directly request or release blood through RaktSetu.</div></aside>
+<aside class="portal-side">
+  <div class="brand"><div class="brand-icon">🩸</div><div><h2>RaktSetu</h2><span>Patient Tracking</span></div></div>
+  <div class="side-label">PATIENT / FAMILY</div>
+  <div class="side-links">
+    <a class="active" href="/patient">⏱ Request Status</a>
+    <a href="#help">❓ Help &amp; Privacy</a>
+  </div>
+  <div class="side-label">ACCOUNT</div>
+  <div class="side-links"><a href="/login" class="switch-portal">🔐 Portal Login</a></div>
+  <div class="side-footer">This view is read-only. Blood requests must be created by a verified hospital/doctor. Patients cannot directly request or release blood through RaktSetu.</div>
+</aside>
+
 <main class="portal-main">
-<header class="portal-header"><div><div class="eyebrow">LIMITED PATIENT / FAMILY VIEW</div><h1>Track Blood Request</h1><p>See the status of a request created by your hospital or doctor.</p></div><div class="user-chip">Patient ID · P10291</div></header>
-<div class="card" style="margin-bottom:18px"><div class="form-grid"><div class="field"><label>Request ID</label><input value="R1238"></div><div class="field"><label>Patient ID</label><input value="P10291"></div></div><div class="action-row"><button class="primary-btn">Check Status</button></div></div>
-<div class="grid two"><div class="card"><h2>R1238 · Current Status</h2><div class="notice"><strong>Verified & Queued</strong><br>Critical request for 3 units of O-. Fulfillment recommendation is being coordinated with verified blood providers.</div><div class="timeline" style="margin-top:18px"><div class="timeline-item"><strong>Clinical request verified</strong><small>Hospital and doctor authorization complete</small></div><div class="timeline-item"><strong>Priority assigned</strong><small>CRITICAL · highest processing priority</small></div><div class="timeline-item"><strong>Blood matching</strong><small>2 units from Bank B + 1 unit from Bank C recommended</small></div><div class="timeline-item"><strong>Provider confirmation</strong><small>Awaiting final dispatch confirmation</small></div></div></div>
-<div class="card" id="help"><h2>Safety & Privacy</h2><p>RaktSetu does not allow patients to directly request or release blood. Your hospital and authorized doctor control the clinical request.</p><div class="notice" style="margin-top:14px">For a new requirement, contact your treating hospital/doctor. They must create and authorize the request.</div></div></div>
-</main></div></body></html>
+  <header class="portal-header">
+    <div>
+      <div class="eyebrow">LIMITED PATIENT / FAMILY VIEW</div>
+      <h1>Track Blood Request</h1>
+      <p>Enter your request ID to see real-time status and fulfillment details.</p>
+    </div>
+    <div class="user-chip">Read-Only Access</div>
+  </header>
+
+  <!-- Search -->
+  <div class="card" style="margin-bottom:18px">
+    <h2>🔍 Look Up Request</h2>
+    <div class="search-row" style="margin-top:14px">
+      <div class="field" style="margin-bottom:0">
+        <label>Request ID</label>
+        <input id="inpReqId" type="text" placeholder="e.g. R1238" style="text-transform:uppercase">
+      </div>
+      <div class="field" style="margin-bottom:0">
+        <label>Your Name (optional)</label>
+        <input id="inpName" type="text" placeholder="Patient or family name">
+      </div>
+      <button class="primary-btn" id="btnCheck" onclick="checkStatus()" style="align-self:flex-end">Check Status</button>
+    </div>
+    <div class="spin-lg" id="loadSpin" style="margin-top:18px"></div>
+    <div class="err-box" id="errBox"></div>
+  </div>
+
+  <!-- Results -->
+  <div id="resultArea" style="display:none" class="grid two">
+    <!-- Left: Status + Details -->
+    <div>
+      <div id="statusHero" class="status-hero">
+        <div class="status-label">Current Status</div>
+        <div class="status-value" id="statusVal">—</div>
+        <div id="statusSub" style="font-size:12px;color:var(--text-muted)"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px">
+        <h2>Request Details</h2>
+        <div class="status-list" id="detailsList"></div>
+      </div>
+
+      <div class="card" id="allocCard" style="display:none">
+        <h2>✅ Fulfillment Plan</h2>
+        <p style="margin-bottom:12px;font-size:12px;color:var(--text-muted)">Blood units allocated from the following banks:</p>
+        <div id="allocList"></div>
+      </div>
+    </div>
+
+    <!-- Right: Timeline -->
+    <div class="card">
+      <h2>📋 Verification Timeline</h2>
+      <p style="margin-bottom:14px;font-size:12px;color:var(--text-muted)">Audit trail of all steps taken for this request.</p>
+      <div id="timeline"></div>
+    </div>
+  </div>
+
+  <!-- Help -->
+  <div class="card" id="help" style="margin-top:18px">
+    <h2>Safety &amp; Privacy</h2>
+    <p>RaktSetu does not allow patients to directly request or release blood. Your hospital and authorized doctor control the clinical request.</p>
+    <div class="notice" style="margin-top:14px">For a new requirement, contact your treating hospital or doctor. They must create and authorize the request through the Requester Portal.</div>
+    <div class="notice" style="margin-top:10px;background:var(--green-bg);color:var(--green);border-color:rgba(21,128,61,.15)">
+      <strong>Status Guide:</strong><br>
+      Queued → Fulfillment matched → Dispatched → Blood released (at blood bank) → Audit complete
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+const EVENT_LABELS = {
+  request_received:'Request Received',
+  hospital_verified:'Hospital Verified',
+  doctor_verified:'Doctor Authorized',
+  prescription_checked:'Prescription Validated',
+  urgency_assigned:'Urgency Classified',
+  priority_queued:'Added to Priority Queue',
+  sent_to_fulfillment:'Sent to Fulfillment',
+  request_fulfilled:'Fulfillment Matched',
+  allocation_details:'Blood Allocated',
+  request_dispatched:'Dispatched'
+};
+
+async function checkStatus() {
+  const id = document.getElementById('inpReqId').value.trim().toUpperCase();
+  if (!id) { showErr('Please enter a Request ID.'); return; }
+
+  hideErr();
+  document.getElementById('resultArea').style.display = 'none';
+  const spin = document.getElementById('loadSpin');
+  spin.style.display = 'block';
+  document.getElementById('btnCheck').disabled = true;
+
+  try {
+    const r = await fetch(`/requests/${encodeURIComponent(id)}/status`, {credentials:'same-origin'});
+    spin.style.display = 'none';
+    document.getElementById('btnCheck').disabled = false;
+
+    if (r.status === 404) { showErr(`Request "${id}" was not found. Check the ID and try again.`); return; }
+    if (!r.ok) { showErr('Server error. Please try again.'); return; }
+
+    const data = await r.json();
+    renderResult(data);
+    document.getElementById('resultArea').style.display = '';
+  } catch(e) {
+    spin.style.display = 'none';
+    document.getElementById('btnCheck').disabled = false;
+    showErr('Unable to connect. Please try again.');
+  }
+}
+
+function renderResult(data) {
+  const req = data.request;
+  const timeline = data.timeline || [];
+
+  // Status hero
+  const status = req.status || 'unknown';
+  const hero = document.getElementById('statusHero');
+  hero.className = `status-hero ${status.replace(/ /g,'_')}`;
+  document.getElementById('statusVal').textContent = status.replaceAll('_',' ').toUpperCase();
+  document.getElementById('statusSub').textContent = `${req.blood_type} · ${req.units_needed} units · Urgency: ${(req.urgency||'?').toUpperCase()}`;
+
+  // Details
+  const dl = document.getElementById('detailsList');
+  dl.innerHTML = [
+    ['Request ID', req.request_id],
+    ['Hospital', req.hospital_name || req.hospital_id],
+    ['Doctor', req.doctor_name || req.doctor_id],
+    ['Blood Type', req.blood_type],
+    ['Units Needed', req.units_needed],
+    ['Clinical Urgency', (req.urgency||'').toUpperCase()],
+    ['Verified', req.verified ? '✓ Yes' : '✗ Pending'],
+    ['Submitted', req.created_at ? new Date(req.created_at).toLocaleString() : '—'],
+  ].map(([k,v])=>`
+    <div class="status-item">
+      <span>${k}</span>
+      <strong>${escHtml(String(v))}</strong>
+    </div>`).join('');
+
+  // Timeline
+  const tl = document.getElementById('timeline');
+  const visible = timeline.filter(e => e.event_name !== 'allocation_details');
+  tl.innerHTML = visible.length === 0
+    ? '<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px">No events recorded yet.</div>'
+    : visible.map(ev => {
+        const det = ev.details || '';
+        const cls = det.includes('rejected')||det.includes('failed') ? 'fail'
+                  : det.includes('pending')                          ? 'pend'
+                  : 'ok';
+        const label = EVENT_LABELS[ev.event_name] || ev.event_name.replaceAll('_',' ');
+        const t = ev.timestamp ? new Date(ev.timestamp).toLocaleTimeString() : '';
+        return `<div class="tl-event">
+          <div class="tl-dot ${cls}"></div>
+          <div style="flex:1">
+            <strong style="font-size:12px;display:block">${escHtml(label)}</strong>
+            <span style="font-size:10.5px;color:var(--text-muted)">${escHtml(det)}</span>
+          </div>
+          <span class="tl-time">${t}</span>
+        </div>`;
+      }).join('');
+
+  // Allocations (from audit log)
+  const allocEvent = timeline.find(e => e.event_name === 'allocation_details');
+  const allocCard = document.getElementById('allocCard');
+  if (allocEvent) {
+    try {
+      const allocs = JSON.parse(allocEvent.details);
+      document.getElementById('allocList').innerHTML = allocs.map(a=>`
+        <div class="alloc-row">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="bchip">${a.blood_type}</div>
+            <div>
+              <strong style="font-size:12px;display:block">${escHtml(a.bank_name)}</strong>
+              <span style="font-size:10.5px;color:var(--text-muted)">${a.distance_km} km away</span>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <strong style="display:block;font-size:16px;font-family:Outfit,sans-serif">${a.units} units</strong>
+            <span style="font-size:9.5px;color:var(--text-muted)">Expiry: ${a.expiry_date}</span>
+          </div>
+        </div>`).join('');
+      allocCard.style.display = '';
+    } catch(_) { allocCard.style.display = 'none'; }
+  } else {
+    allocCard.style.display = 'none';
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('errBox');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideErr() { document.getElementById('errBox').style.display = 'none'; }
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Allow Enter key in input
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('inpReqId').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkStatus();
+  });
+});
+</script>
+</body>
+</html>

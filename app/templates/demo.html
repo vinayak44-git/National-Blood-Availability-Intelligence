@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="judge_demo">RaktSetu — SIH 2026 Judge Demonstration Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/portals.css">
+    <style>
+        .demo-container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+        .badge { display: inline-flex; align-items: center; gap: 6px; background: var(--blood-light); border: 1px solid rgba(192,24,43,0.25); color: var(--blood-accent); padding: 6px 16px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 16px; }
+
+        .demo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 36px; }
+
+        .demo-card { background: var(--cream-card); border: 1px solid var(--cream-border); border-radius: 18px; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: var(--shadow); transition: all 0.25s ease; }
+        .demo-card:hover { transform: translateY(-4px); border-color: var(--blood-accent); box-shadow: var(--shadow-lg); }
+        .demo-card h3 { font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .demo-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
+
+        .btn-demo { background: linear-gradient(135deg, var(--blood-accent), var(--blood-red)); color: #fff; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s ease; text-align: center; text-decoration: none; box-shadow: 0 4px 14px rgba(192,24,43,0.25); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-demo:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(192,24,43,0.35); }
+
+        .btn-secondary { background: var(--cream-card); color: var(--text-dark); border: 1px solid var(--cream-border); box-shadow: none; }
+        .btn-secondary:hover { background: #fff; border-color: var(--blood-accent); color: var(--blood-accent); }
+
+        .console-box { background: var(--cream-card); border: 1px solid var(--cream-border); border-radius: 18px; padding: 20px; box-shadow: var(--shadow); }
+        .console-output { background: #150d0f; border: 1px solid rgba(192,24,43,0.2); border-radius: 12px; padding: 18px; font-family: 'Courier New', monospace; font-size: 12px; color: #4ade80; height: 180px; overflow-y: auto; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+
+    <!-- Header Navigation -->
+    <header style="background:rgba(252,251,250,0.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--cream-border);padding:16px 36px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;">
+        <div style="display:flex;align-items:center;gap:10px">
+            <a href="/" style="text-decoration:none;display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--blood-accent),var(--blood-red));border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;box-shadow:0 4px 12px rgba(192,24,43,0.3)">🩸</div>
+                <div style="font-family:Outfit,sans-serif;font-weight:900;font-size:22px;color:var(--text-dark)">RaktSetu</div>
+            </a>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:20px">
+            <a href="/" style="color:var(--text-dark);text-decoration:none;font-weight:600;font-size:13px">← Home</a>
+            <a href="/login" style="color:var(--text-dark);text-decoration:none;font-weight:600;font-size:13px">🔐 Login</a>
+
+            <select class="lang-selector" style="background:#fff;border:1px solid var(--cream-border);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--text-dark);cursor:pointer;">
+                <option value="en">🌐 English</option>
+                <option value="hi">🇮🇳 हिन्दी</option>
+                <option value="ta">🇮🇳 தமிழ்</option>
+                <option value="te">🇮🇳 తెలుగు</option>
+                <option value="bn">🇮🇳 বাংলা</option>
+                <option value="mr">🇮🇳 मराठी</option>
+            </select>
+
+            <a href="/dashboard?demo=true" class="btn-demo" style="padding:8px 18px;font-size:12px" data-i18n="open_control">⚡ Dispatcher Console</a>
+        </div>
+    </header>
+
+    <div class="demo-container">
+        <div style="text-align:center;margin-bottom:40px">
+            <div class="badge">🎮 SIH 2026 Interactive Demonstration Suite</div>
+            <h1 style="font-family:Outfit,sans-serif;font-size:38px;font-weight:900;color:var(--text-dark);margin-bottom:10px">RaktSetu End-to-End Judge Console</h1>
+            <p style="color:var(--text-muted);font-size:15px;max-width:700px;margin:0 auto">Trigger automated real-time workflows to test verification, split allocations, drone logistics, and rare donor callouts.</p>
+        </div>
+
+        <div class="demo-grid">
+            <div class="demo-card">
+                <div>
+                    <h3>🔴 1. Generate Critical Request</h3>
+                    <p>Creates a verified O- Critical Trauma request from Metro General Hospital and injects it into the live Priority Engine.</p>
+                </div>
+                <button onclick="runScenario('generate_critical')" class="btn-demo">⚡ Run Scenario 1</button>
+            </div>
+
+            <div class="demo-card">
+                <div>
+                    <h3>🔀 2. Multi-Bank Split Match</h3>
+                    <p>Calculates optimal multi-bank inventory allocation across connected blood banks for high-volume requirements.</p>
+                </div>
+                <button onclick="runScenario('simulate_split')" class="btn-demo">⚡ Run Scenario 2</button>
+            </div>
+
+            <div class="demo-card">
+                <div>
+                    <h3>🚚 3. Drone GPS Transit</h3>
+                    <p>Launches ICMR aerial drone transit with 3.8°C cold-chain telemetry tracking towards hospital location.</p>
+                </div>
+                <button onclick="runScenario('simulate_gps')" class="btn-demo">⚡ Run Scenario 3</button>
+            </div>
+
+            <div class="demo-card">
+                <div>
+                    <h3>🚨 4. Rare Donor Broadcast</h3>
+                    <p>Broadcasts emergency SMS alert callout to 14 registered voluntary donors for Bombay / O- blood group.</p>
+                </div>
+                <button onclick="runScenario('donor_alert')" class="btn-demo">⚡ Run Scenario 4</button>
+            </div>
+
+            <div class="demo-card">
+                <div>
+                    <h3>🖥️ 5. Open Dispatcher Console</h3>
+                    <p>View live priority queue, map allocations, and process requests in control room interface.</p>
+                </div>
+                <a href="/dashboard?demo=true" target="_blank" class="btn-demo" data-i18n="dispatcher_console">Dispatcher Console ↗</a>
+            </div>
+
+            <div class="demo-card">
+                <div>
+                    <h3>🔄 6. Reset Demo State</h3>
+                    <p>Clears simulated demo requests and resets the priority queue to baseline test state.</p>
+                </div>
+                <button onclick="runScenario('reset_demo')" class="btn-demo">Reset Demo State</button>
+            </div>
+        </div>
+
+        <div class="console-box">
+            <div style="margin-bottom:12px;font-size:11px;font-weight:800;color:var(--text-muted);letter-spacing:0.8px">LIVE EVENT EXECUTION LOG</div>
+            <div class="console-output" id="logOutput">[ System initialized. Ready to execute SIH demonstration scenarios. ]</div>
+        </div>
+    </div>
+
+    <footer style="border-top:1px solid var(--cream-border);padding:30px;text-align:center;color:var(--text-muted);font-size:12px;margin-top:50px">
+        RaktSetu © 2026 — National Blood Availability Intelligence Platform | Team SynapTech (SIH 2026)
+    </footer>
+
+    <script src="/static/js/i18n.js"></script>
+    <script>
+        function log(msg) {
+            const out = document.getElementById('logOutput');
+            const time = new Date().toLocaleTimeString();
+            out.innerHTML += `<div><span style="color:#94a3b8">[${time}]</span> ${msg}</div>`;
+            out.scrollTop = out.scrollHeight;
+        }
+
+        async function runScenario(action) {
+            log(`Executing scenario: <b>${action}</b>...`);
+            try {
+                if (action === 'donor_alert') {
+                    const r = await fetch('/donors/callout', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({blood_type: 'O-', units_needed: 3, hospital_name: 'Metro General Hospital', location: 'Delhi'})
+                    });
+                    const d = await r.json();
+                    log(`✔ Broadcast Sent! Broadcast ID: <b style="color:#facc15">${d.broadcast_id}</b>. ${d.message}`);
+                    return;
+                }
+
+                const r = await fetch('/demo/simulate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action})
+                });
+                const d = await r.json();
+                log(`✔ Result: <b style="color:#4ade80">${d.message}</b>`);
+            } catch(e) {
+                log(`❌ Error: ${e.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -34,9 +34,26 @@ def section(title):
     print("=" * 70)
 
 
+session = requests.Session()
+
+# Log in as dispatcher to allow cross-hospital submissions in testing
+try:
+    login_resp = session.post(
+        f"{BASE_URL}/auth/login",
+        data={"username": "dispatcher1", "password": "Dispatcher@123"},
+        timeout=5
+    )
+    if login_resp.status_code != 200:
+        print(f"\n[ERROR] Authentication failed. Code: {login_resp.status_code}, Body: {login_resp.text}")
+        sys.exit(1)
+except requests.exceptions.ConnectionError:
+    print(f"\n[ERROR] Could not connect to {BASE_URL}. Is the server running?")
+    print("   Start it with: uvicorn app.main:app --reload")
+    sys.exit(1)
+
 def safe_post(path, json_body=None):
     try:
-        return requests.post(f"{BASE_URL}{path}", json=json_body, timeout=5)
+        return session.post(f"{BASE_URL}{path}", json=json_body, timeout=5)
     except requests.exceptions.ConnectionError:
         print(f"\n[ERROR] Could not connect to {BASE_URL}. Is the server running?")
         print("   Start it with: uvicorn app.main:app --reload")
@@ -45,7 +62,7 @@ def safe_post(path, json_body=None):
 
 def safe_get(path):
     try:
-        return requests.get(f"{BASE_URL}{path}", timeout=5)
+        return session.get(f"{BASE_URL}{path}", timeout=5)
     except requests.exceptions.ConnectionError:
         print(f"\n[ERROR] Could not connect to {BASE_URL}. Is the server running?")
         print("   Start it with: uvicorn app.main:app --reload")

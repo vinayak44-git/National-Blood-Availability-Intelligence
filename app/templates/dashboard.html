@@ -6,21 +6,350 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RaktSetu | Dispatcher Control Center</title>
 
-    <!-- Google Fonts: Inter & Outfit for modern typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    <!-- Leaflet Map CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
-    <!-- Dashboard CSS -->
     <link rel="stylesheet" href="/static/css/dashboard.css">
+
+    <style>
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+        /* Network panel */
+        .network-panel {
+            background: var(--cream-card);
+            border: 1px solid var(--cream-border);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            margin-bottom: 22px;
+            box-shadow: var(--shadow-sm);
+        }
+        .network-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 10px;
+            margin-top: 14px;
+        }
+        @media(max-width:1100px) { .network-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media(max-width:650px)  { .network-grid { grid-template-columns: repeat(2, 1fr); } }
+        .net-cell {
+            border: 1px solid var(--cream-border);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            background: var(--cream-highlight);
+            transition: .2s;
+        }
+        .net-cell:hover { border-color: var(--blood-accent); box-shadow: var(--shadow-sm); }
+        .net-cell-type { font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: var(--blood-accent); margin-bottom: 4px; }
+        .net-cell-units { font-size: 20px; font-weight: 700; font-family: 'Outfit', sans-serif; line-height: 1; }
+        .net-cell-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+        .net-cell-bar { height: 4px; border-radius: 999px; background: var(--cream-border); margin: 6px 0 3px; overflow: hidden; }
+        .net-cell-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--blood-red), var(--blood-accent)); transition: width .5s; }
+        .net-cell-bar-fill.low  { background: linear-gradient(90deg, #dc2626, #ef4444); }
+        .net-cell-bar-fill.good { background: linear-gradient(90deg, #15803d, #22c55e); }
+        .net-exp-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; background: #fff8e6; border: 1px solid #fde68a; margin-bottom: 6px; font-size: 11px; }
+        .net-exp-row:last-child { margin-bottom: 0; }
+
+        .simulator-message {
+            display: none;
+            margin-top: 12px;
+            padding: 11px 13px;
+            border-radius: 9px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .simulator-message.success {
+            display: block;
+            background: #effaf2;
+            border: 1px solid #b7e4c1;
+            color: #176b2c;
+        }
+
+        .simulator-message.error {
+            display: block;
+            background: #fff0f0;
+            border: 1px solid rgba(168, 26, 41, .2);
+            color: #a81a29;
+        }
+
+        .simulator-message.pending {
+            display: block;
+            background: #fff8e6;
+            border: 1px solid #f1d58a;
+            color: #8a6500;
+        }
+
+        .submit-btn-loading {
+            opacity: .65;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .request-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .request-meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .request-meta-item span {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #817b78;
+            font-weight: 600;
+        }
+
+        .request-meta-item strong {
+            font-size: 14px;
+            color: #302b2a;
+        }
+
+        .clinical-note-box {
+            margin-top: 18px;
+            padding: 12px 14px;
+            border: 1px solid #e1d9d2;
+            border-left: 3px solid #c8c0b9;
+            border-radius: 9px;
+            background: #f8f5f1;
+            font-size: 12px;
+            color: #706966;
+        }
+
+        .active-request-card.has-request {
+            padding: 20px;
+        }
+
+        .request-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .request-card-title {
+            font-family: "Outfit", sans-serif;
+            font-size: 21px;
+            font-weight: 700;
+            color: #302b2a;
+        }
+
+        .request-card-subtitle {
+            margin-top: 5px;
+            font-size: 12px;
+            color: #77706c;
+        }
+
+        .blood-summary {
+            min-width: 72px;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #f0c4c9;
+            border-radius: 10px;
+            background: #fff5f5;
+        }
+
+        .blood-summary strong {
+            display: block;
+            color: #b21d2d;
+            font-size: 21px;
+        }
+
+        .blood-summary span {
+            display: block;
+            margin-top: 3px;
+            font-size: 10px;
+            color: #756e6a;
+            text-transform: uppercase;
+        }
+
+        .queue-item {
+            cursor: pointer;
+        }
+
+        .queue-item.selected {
+            outline: 2px solid rgba(168, 26, 41, .18);
+        }
+
+        .pipeline-step.passed {
+            border-color: #b7e4c1;
+            background: #f4fbf5;
+        }
+
+        .pipeline-step.failed {
+            border-color: #efc0c5;
+            background: #fff5f5;
+        }
+
+        .pipeline-step.pending {
+            border-color: #f1d58a;
+            background: #fffaf0;
+        }
+
+        .pipeline-step .step-details span {
+            display: block;
+            margin-top: 5px;
+            font-size: 11px;
+            color: #77706c;
+        }
+
+        .pipeline-step.passed .step-details span {
+            color: #19863a;
+        }
+
+        .pipeline-step.failed .step-details span {
+            color: #b21d2d;
+        }
+
+        .pipeline-step.pending .step-details span {
+            color: #967000;
+        }
+
+        .audit-entry {
+            padding: 13px 0;
+            border-bottom: 1px solid #e8e1db;
+        }
+
+        .audit-entry:last-child {
+            border-bottom: none;
+        }
+
+        .audit-entry strong {
+            display: block;
+            font-size: 12px;
+            color: #302b2a;
+        }
+
+        .audit-entry span {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            color: #827b77;
+        }
+
+        .backend-error-box {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #fff0f0;
+            color: #a81a29;
+            font-size: 11px;
+        }
+
+        .network-panel {
+            background: #ffffff;
+            border: 1px solid #e5ded8;
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .network-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .net-cell {
+            background: #faf7f5;
+            border: 1px solid #ede6e0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .net-cell-type {
+            font-weight: 800;
+            font-size: 13px;
+            color: #8b0000;
+        }
+
+        .net-cell-units {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2b2625;
+            margin: 2px 0 6px;
+        }
+
+        .net-cell-bar {
+            width: 100%;
+            height: 5px;
+            background: #e2dad4;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .net-cell-bar-fill {
+            height: 100%;
+            background: #dc2626;
+            border-radius: 999px;
+            transition: width 0.3s ease;
+        }
+
+        .net-cell-bar-fill.good {
+            background: #16a34a;
+        }
+
+        .net-cell-bar-fill.low {
+            background: #d97706;
+        }
+
+        .net-cell-label {
+            font-size: 10px;
+            color: #827b77;
+            margin-top: 5px;
+        }
+
+        .net-exp-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 10px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            color: #92400e;
+        }
+
+        @media (max-width: 800px) {
+            .request-meta-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .request-card-top {
+                flex-direction: column;
+            }
+        }
+    </style>
 </head>
 
 <body>
+
     <div class="ambient-background" aria-hidden="true">
         <span class="ambient-orb orb-one"></span>
         <span class="ambient-orb orb-two"></span>
@@ -34,8 +363,8 @@
         <span class="ambient-dot dot-four"></span>
     </div>
 
-    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
+
         <div class="brand">
             <div class="brand-icon">🩸</div>
             <div class="brand-text">
@@ -45,11 +374,13 @@
         </div>
 
         <div class="sidebar-label">CONTROL ROOM</div>
+
         <nav class="navigation">
             <a href="/dashboard" class="nav-item active">
                 <span class="nav-icon">▦</span>
                 <span>Dashboard</span>
             </a>
+
             <a href="#queueListContainer" class="nav-item" id="nav-queue-btn">
                 <span class="nav-icon">⏳</span>
                 <span>Priority Queue</span>
@@ -57,29 +388,23 @@
             </a>
         </nav>
 
-        <div class="sidebar-label">PORTALS</div>
-        <nav class="navigation portal-navigation">
-            <a href="/requester" class="nav-item">
-                <span class="nav-icon">🏥</span>
-                <span>Requester Portal</span>
-            </a>
-            <a href="/provider" class="nav-item">
-                <span class="nav-icon">🩸</span>
-                <span>Provider Portal</span>
-            </a>
-            <a href="/patient" class="nav-item">
-                <span class="nav-icon">👤</span>
-                <span>Patient Tracking</span>
-            </a>
-        </nav>
+        <div class="sidebar-label">BACKEND STATUS</div>
 
-        <div class="sidebar-label">ACTIVE BACKEND STATUS</div>
         <div class="backend-features">
             <div class="feature-tag working">✓ Hospital Verification</div>
             <div class="feature-tag working">✓ Doctor Authorization</div>
             <div class="feature-tag working">✓ Prescription Validation</div>
             <div class="feature-tag working">✓ Urgency Priority Queue</div>
         </div>
+
+        <div class="sidebar-label">ACCOUNT</div>
+
+        <nav class="navigation">
+            <a href="/login" class="nav-item nav-switch-portal">
+                <span class="nav-icon">🔐</span>
+                <span>Switch Portal / Logout</span>
+            </a>
+        </nav>
 
         <div class="sidebar-bottom">
             <div class="system-status">
@@ -90,115 +415,265 @@
                 </div>
             </div>
         </div>
+
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="main-content">
 
-        <!-- HEADER -->
         <header class="topbar">
+
             <div class="mobile-menu" id="mobileMenu">☰</div>
+
             <div class="page-heading">
-                <span class="eyebrow">DISPATCHER PORTAL · VERIFICATION & PRIORITIZATION</span>
+                <span class="eyebrow">
+                    DISPATCHER PORTAL · VERIFICATION & PRIORITIZATION
+                </span>
+
                 <h1>Dispatcher Console</h1>
-                <p>Monitor verified requests, prioritize emergencies, and coordinate fulfillment.</p>
+
+                <p>
+                    Monitor verified requests, prioritize emergencies, and coordinate fulfillment.
+                </p>
             </div>
-            <div class="topbar-actions">
+
+            <div class="topbar-actions" style="display:flex;align-items:center;gap:10px;">
+
+                <!-- Backend Health Badge -->
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px;">
+                    <span style="color:#22c55e">●</span> Backend Online
+                </div>
+
+                <!-- Notification Bell -->
+                <div style="position:relative;">
+                    <button onclick="toggleNotifs()" style="background:#fff;border:1px solid #ede6e0;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                        🔔 <span id="notifBadge" style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 5px;font-size:9px;font-weight:900;">2</span>
+                    </button>
+                    <div id="notifMenu" style="display:none;position:absolute;right:0;top:38px;width:280px;background:#fff;border:1px solid #ede6e0;border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,0.15);z-index:200;padding:12px;">
+                        <div style="font-size:11px;font-weight:800;color:#302b2a;margin-bottom:8px;border-bottom:1px solid #f5f0eb;padding-bottom:4px;">NOTIFICATIONS</div>
+                        <div id="notifList" style="font-size:11px;color:#555;display:flex;flex-direction:column;gap:8px;">
+                            <div>Loading alerts...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <select id="langSelector" onchange="changeLanguage(this.value)" style="background:#fff;border:1px solid #ede6e0;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:#302b2a;cursor:pointer;">
+                    <option value="en">🌐 English</option>
+                    <option value="hi">🇮🇳 हिन्दी</option>
+                    <option value="ta">🇮🇳 தமிழ்</option>
+                    <option value="te">🇮🇳 తెలుగు</option>
+                    <option value="bn">🇮🇳 বাংলা</option>
+                    <option value="mr">🇮🇳 मराठी</option>
+                </select>
+
                 <button class="action-btn-red" id="popRequestBtn">
                     ⚡ Process Next Request
                 </button>
+
                 <div class="dispatcher-profile">
                     <div class="profile-avatar">D</div>
+
                     <div class="profile-info">
                         <strong>Dispatcher #01</strong>
-                        <span>Control Room · <a href="/login">Switch portal</a></span>
+                        <span>
+                            Control Room ·
+                            <a href="/login">Switch portal</a>
+                        </span>
                     </div>
                 </div>
+
             </div>
+
         </header>
 
-        <!-- STATS GRID -->
+        <!-- ── National Impact Analytics Banner ── -->
+        <section style="background:linear-gradient(135deg, #2b0408, #4a0910);border-radius:14px;padding:16px 20px;color:#fff;margin-bottom:18px;box-shadow:0 8px 24px rgba(74,9,16,0.25);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;">
+            <div>
+                <div style="font-size:10px;font-weight:800;color:#fca5a5;letter-spacing:1px;text-transform:uppercase">NATIONAL IMPACT ANALYTICS</div>
+                <div style="font-size:18px;font-weight:800;margin-top:2px;display:flex;align-items:center;gap:8px;">
+                    <span>🩸 RaktSetu Mission Stats</span>
+                    <span class="tag green" style="font-size:9px;padding:2px 7px">LIVE SYNC</span>
+                </div>
+            </div>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:11px;">
+                <div><span style="color:#fca5a5;display:block;font-size:10px">LIVES IMPACTED</span><strong id="impactLives" style="font-size:16px;color:#fff">1,420+</strong></div>
+                <div><span style="color:#fca5a5;display:block;font-size:10px">AVG FULFILLMENT</span><strong id="impactTime" style="font-size:16px;color:#4ade80">16.4 Mins</strong></div>
+                <div><span style="color:#fca5a5;display:block;font-size:10px">COLD-CHAIN INTEGRITY</span><strong id="impactCold" style="font-size:16px;color:#60a5fa">99.92%</strong></div>
+                <div><span style="color:#fca5a5;display:block;font-size:10px">WASTAGE RATE</span><strong id="impactWaste" style="font-size:16px;color:#facc15">0.18%</strong></div>
+            </div>
+            <button onclick="triggerRareDonorBroadcast()" style="background:#dc2626;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(220,38,38,0.4)">
+                🚨 Emergency Donor Callout
+            </button>
+        </section>
+
         <section class="stats-grid">
+
             <div class="stat-card" id="stat-total">
                 <div class="stat-icon gray">📁</div>
+
                 <div class="stat-content">
                     <span>Total Received</span>
                     <strong id="statReceivedCount">0</strong>
                     <small>All-time logged</small>
                 </div>
             </div>
+
             <div class="stat-card" id="stat-verified">
                 <div class="stat-icon green">✓</div>
+
                 <div class="stat-content">
                     <span>Verified & Queued</span>
                     <strong id="statVerifiedCount">0</strong>
                     <small>Ready for dispatch</small>
                 </div>
             </div>
+
             <div class="stat-card" id="stat-rejected">
                 <div class="stat-icon red">✗</div>
+
                 <div class="stat-content">
                     <span>Rejected</span>
                     <strong id="statRejectedCount">0</strong>
                     <small>Failed validations</small>
                 </div>
             </div>
+
             <div class="stat-card" id="stat-pending">
                 <div class="stat-icon yellow">⚠</div>
+
                 <div class="stat-content">
                     <span>Pending Clinical</span>
                     <strong id="statPendingCount">0</strong>
                     <small>Awaiting verification</small>
                 </div>
             </div>
+
         </section>
 
-        <!-- MAIN TRIPLE COLUMN GRID -->
+        <!-- ── Network Blood Availability Panel ── -->
+        <section class="network-panel" id="networkPanel">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                <div>
+                    <span class="section-eyebrow" style="color:var(--blood-accent);font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase">NATIONAL NETWORK</span>
+                    <h2 style="font-size:15px;margin-top:3px">Aggregated Blood Availability — All Banks</h2>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <select id="netBloodFilter" onchange="filterNetworkGrid()" style="background:#fff;border:1px solid #ede6e0;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:600;color:#302b2a;cursor:pointer;">
+                        <option value="ALL">All Blood Groups (8)</option>
+                        <option value="UNIVERSAL">O- / Universal Donors</option>
+                        <option value="LOW">Low Stock (≤ 200 units)</option>
+                        <option value="HIGH">High Stock (> 500 units)</option>
+                    </select>
+                    <button id="toggleNetBreakdown" onclick="toggleNetworkBreakdown()" style="background:#faf7f5;border:1px solid #ede6e0;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;color:#8b0000;cursor:pointer;">
+                        ▼ Bank Breakdown
+                    </button>
+                    <button id="expiryAlertBadge" onclick="toggleExpiryAlerts()" style="display:none;background:#fef9c3;color:#a16207;padding:6px 12px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid #fde68a;cursor:pointer;">
+                        ⚠ Expiry Alerts ▾
+                    </button>
+                    <button onclick="loadNetworkInventory()" style="background:none;border:1px solid #ede6e0;border-radius:8px;padding:6px 12px;font-size:11px;cursor:pointer;color:#77706c;">↻ Refresh</button>
+                </div>
+            </div>
+            <div class="network-grid" id="networkGrid">
+                <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-size:12px">Loading network inventory…</div>
+            </div>
+            <div id="bankBreakdownContainer" style="display:none;margin-top:16px;padding-top:14px;border-top:1px dashed #ede6e0;"></div>
+            <div id="expirySection" style="margin-top:16px;display:none">
+                <div style="font-size:11px;font-weight:700;color:#a16207;letter-spacing:1px;margin-bottom:8px">⚠ EXPIRY ALERTS (next 3 days)</div>
+                <div id="expiryAlertList"></div>
+            </div>
+        </section>
+
         <div class="dashboard-grid">
 
-            <!-- COLUMN 1: QUEUE & SIMULATOR -->
             <section class="grid-column left-column">
-                <div class="card-header">
-                    <h2>Priority Queue</h2>
-                    <span class="badge" id="queueSizeBadge">0 items</span>
-                </div>
-                <div class="queue-list" id="queueListContainer">
-                    <!-- Dynamic Queue Items -->
-                    <div class="empty-state">Queue is empty. Submit a request using the simulator.</div>
+
+                <div class="card-header" style="flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <h2>Priority Queue</h2>
+                        <span class="badge" id="queueSizeBadge">0 items</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <select id="queueStatusFilter" onchange="renderQueue()" style="background:#fff;border:1px solid #ede6e0;border-radius:6px;padding:4px 8px;font-size:11px;color:#302b2a;cursor:pointer;">
+                            <option value="ALL">All Statuses</option>
+                            <option value="QUEUED">Queued / Active</option>
+                            <option value="FULFILLED">Fulfilled / Partial</option>
+                            <option value="PENDING">Pending Verification</option>
+                        </select>
+                        <input id="queueSearchInput" oninput="renderQueue()" type="text" placeholder="🔍 Search ID..." style="width:95px;padding:4px 8px;border:1px solid #ede6e0;border-radius:6px;font-size:11px;">
+                    </div>
                 </div>
 
-                <!-- SIMULATOR PANEL -->
+                <div class="queue-list" id="queueListContainer">
+                    <div class="empty-state">
+                        Queue is empty. Submit a request using the simulator.
+                    </div>
+                </div>
+
                 <div class="simulator-panel">
+
                     <div class="card-header">
                         <h2>Request Simulator</h2>
                         <span class="badge yellow">Interactive</span>
                     </div>
+
                     <form id="simulatorForm" class="sim-form">
+
                         <div class="form-row">
+
                             <div class="form-group">
                                 <label for="simHospital">Hospital</label>
+
                                 <select id="simHospital" required>
-                                    <option value="H01">H01 - City Care Hospital (Delhi)</option>
-                                    <option value="H02">H02 - Metro General Hospital</option>
-                                    <option value="H03">H03 - Shanti Medical Centre</option>
-                                    <option value="H99">H99 - Invalid/Mock Hospital</option>
+                                    <option value="H01">
+                                        H01 - City Care Hospital (Delhi)
+                                    </option>
+
+                                    <option value="H02" selected>
+                                        H02 - Metro General Hospital
+                                    </option>
+
+                                    <option value="H03">
+                                        H03 - Shanti Medical Centre
+                                    </option>
+
+                                    <option value="H99">
+                                        H99 - Invalid/Mock Hospital
+                                    </option>
                                 </select>
                             </div>
+
                             <div class="form-group">
                                 <label for="simDoctor">Doctor</label>
+
                                 <select id="simDoctor" required>
-                                    <option value="D01">D01 - Dr. Arjun Sharma (H01 Authorized)</option>
-                                    <option value="D03">D03 - Dr. Rahul Singh (H02 Authorized)</option>
-                                    <option value="D11">D11 - Dr. Test Unauthorized</option>
-                                    <option value="D12">D12 - Dr. Wrong Hospital (D12 at H03)</option>
-                                    <option value="D99">D99 - Non-existent Doctor</option>
+                                    <option value="D01">
+                                        D01 - Dr. Arjun Sharma (H01 Authorized)
+                                    </option>
+
+                                    <option value="D03" selected>
+                                        D03 - Dr. Rahul Singh (H02 Authorized)
+                                    </option>
+
+                                    <option value="D11">
+                                        D11 - Dr. Test Unauthorized
+                                    </option>
+
+                                    <option value="D12">
+                                        D12 - Dr. Wrong Hospital (D12 at H03)
+                                    </option>
+
+                                    <option value="D99">
+                                        D99 - Non-existent Doctor
+                                    </option>
                                 </select>
                             </div>
+
                         </div>
 
                         <div class="form-row">
+
                             <div class="form-group">
                                 <label for="simBlood">Blood Group</label>
+
                                 <select id="simBlood" required>
                                     <option value="O-">O-</option>
                                     <option value="O+">O+</option>
@@ -210,155 +685,2161 @@
                                     <option value="AB+">AB+</option>
                                 </select>
                             </div>
+
                             <div class="form-group">
                                 <label for="simUnits">Units Needed</label>
+
                                 <input type="number" id="simUnits" min="1" max="15" value="3" required>
                             </div>
+
                         </div>
 
                         <div class="form-row">
+
                             <div class="form-group">
                                 <label for="simUrgency">Urgency Input</label>
+
                                 <select id="simUrgency" required>
-                                    <option value="critical">Critical (Accident, Trauma)</option>
-                                    <option value="urgent">Urgent (Surgery)</option>
-                                    <option value="routine">Routine (Replenishment)</option>
-                                    <option value="scheduled">Scheduled (Planned Procedure)</option>
+                                    <option value="critical">
+                                        Critical (Accident, Trauma)
+                                    </option>
+
+                                    <option value="urgent">
+                                        Urgent (Surgery)
+                                    </option>
+
+                                    <option value="routine">
+                                        Routine (Replenishment)
+                                    </option>
+
+                                    <option value="scheduled">
+                                        Scheduled (Planned Procedure)
+                                    </option>
                                 </select>
                             </div>
+
                             <div class="form-group">
-                                <label for="simPrescription">Prescription ID</label>
+                                <label for="simPrescription">
+                                    Prescription ID
+                                </label>
+
                                 <input type="text" id="simPrescription" value="RX10293"
                                     placeholder="Leave empty for pending">
                             </div>
+
                         </div>
 
                         <div class="form-group">
-                            <label for="simNotes">Clinical Note</label>
+                            <label for="simNotes">
+                                Clinical Note
+                            </label>
+
                             <textarea id="simNotes" rows="2"
                                 placeholder="e.g., Patient in ER with active internal bleeding. Need matching blood immediately.">Active internal bleeding, requires transfusion.</textarea>
                         </div>
 
-                        <button type="submit" class="submit-btn">
+                        <button type="submit" class="submit-btn" id="simulatorSubmitButton">
                             📤 Submit to Verification Engine
                         </button>
+
+                        <div id="simulatorMessage" class="simulator-message"></div>
+
                     </form>
+
                 </div>
+
             </section>
 
-            <!-- COLUMN 2: ACTIVE REQUEST DETAILS & RECOMMENDATIONS -->
             <section class="grid-column center-column">
+
                 <div class="card-header">
                     <h2>Active Request details</h2>
-                    <span class="badge" id="activeRequestStatus">No Active Request</span>
+                    <span class="badge" id="activeRequestStatus">
+                        No Active Request
+                    </span>
                 </div>
 
                 <div id="activeRequestDetails" class="active-request-card empty">
-                    <div class="empty-state">No request is currently active. Select a request from the queue or process
-                        the next item.</div>
+                    <div class="empty-state">
+                        No request is currently active. Select a request from the queue or process the next item.
+                    </div>
                 </div>
 
-                <!-- VERIFICATION PIPELINE -->
                 <div class="pipeline-card">
+
                     <div class="card-header">
                         <h2>Verification Pipeline</h2>
                         <span class="badge green">Live Backend</span>
                     </div>
+
                     <div class="pipeline-steps">
+
                         <div class="pipeline-step" id="step-hospital">
                             <div class="step-icon">🏥</div>
+
                             <div class="step-details">
                                 <strong>Hospital Validation</strong>
                                 <span id="val-hospital-status">-</span>
                             </div>
                         </div>
+
                         <div class="pipeline-step" id="step-doctor">
                             <div class="step-icon">👨‍⚕️</div>
+
                             <div class="step-details">
                                 <strong>Doctor Authorization</strong>
                                 <span id="val-doctor-status">-</span>
                             </div>
                         </div>
+
                         <div class="pipeline-step" id="step-prescription">
                             <div class="step-icon">📄</div>
+
                             <div class="step-details">
                                 <strong>Prescription Validity</strong>
                                 <span id="val-prescription-status">-</span>
                             </div>
                         </div>
+
                         <div class="pipeline-step" id="step-priority">
                             <div class="step-icon">🚨</div>
+
                             <div class="step-details">
                                 <strong>Urgency Prioritization</strong>
                                 <span id="val-priority-status">-</span>
                             </div>
                         </div>
+
                     </div>
+
                 </div>
 
-                <!-- ALLOCATION & RECOMMENDATIONS -->
                 <div class="allocation-section">
+
                     <div class="card-header">
                         <h2>Recommended Split-Fulfillment</h2>
+
                         <div class="match-indicator">
                             <span class="green-dot"></span>
                             Matching Engine Active
                         </div>
                     </div>
+
                     <div id="allocationContainer" class="allocation-container">
-                        <div class="empty-state">Fulfillment options will appear once a request is verified.</div>
+                        <div class="empty-state">
+                            Fulfillment options will appear once a request is verified.
+                        </div>
                     </div>
+
                 </div>
+
             </section>
 
-            <!-- COLUMN 3: AUDIT TRAIL / ACTIVITY LOGGER -->
             <section class="grid-column right-column">
+
                 <div class="card-header">
                     <h2>Audit Trail Logs</h2>
                     <span class="badge">Traceability</span>
                 </div>
+
                 <div class="audit-trail-container" id="auditTrailContainer">
-                    <div class="empty-state">Select a request to view its verification events.</div>
+                    <div class="empty-state">
+                        Select a request to view its verification events.
+                    </div>
                 </div>
+
             </section>
 
         </div>
 
-        <!-- MAP SECTION -->
         <section class="map-card">
+
             <div class="map-header">
+
                 <div>
-                    <span class="section-eyebrow">LIVE GEOSPATIAL VIEW</span>
+                    <span class="section-eyebrow">
+                        LIVE GEOSPATIAL VIEW
+                    </span>
+
                     <h2>Blood Supply Network Map</h2>
                 </div>
+
                 <div class="map-legend">
+
                     <div>
                         <span class="legend-marker hospital-marker"></span>
                         Hospital
                     </div>
+
                     <div>
                         <span class="legend-marker bank-marker"></span>
                         Blood Bank
                     </div>
+
                 </div>
+
             </div>
+
             <div id="map" class="map-container"></div>
+
         </section>
 
-        <!-- FOOTER -->
         <footer class="dashboard-footer">
-            <span>RaktSetu Emergency Blood Intelligence Engine</span>
-            <span>System Status: <strong style="color: #22c55e;">ONLINE</strong></span>
+            <span>
+                RaktSetu Emergency Blood Intelligence Engine
+            </span>
+
+            <span>
+                System Status:
+                <strong style="color:#22c55e;">ONLINE</strong>
+            </span>
         </footer>
 
     </main>
 
-    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Dashboard JS -->
-    <script src="/static/js/dashboard.js"></script>
+    <script>
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
 
-</body>
+        const simulatorForm = document.getElementById("simulatorForm");
+        const simulatorSubmitButton = document.getElementById("simulatorSubmitButton");
+        const simulatorMessage = document.getElementById("simulatorMessage");
 
+        const activeRequestDetails = document.getElementById("activeRequestDetails");
+        const activeRequestStatus = document.getElementById("activeRequestStatus");
+
+        const queueListContainer = document.getElementById("queueListContainer");
+        const queueSizeBadge = document.getElementById("queueSizeBadge");
+        const navQueueCount = document.getElementById("navQueueCount");
+
+        const allocationContainer = document.getElementById("allocationContainer");
+        const auditTrailContainer = document.getElementById("auditTrailContainer");
+
+        const statReceivedCount = document.getElementById("statReceivedCount");
+        const statVerifiedCount = document.getElementById("statVerifiedCount");
+        const statRejectedCount = document.getElementById("statRejectedCount");
+        const statPendingCount = document.getElementById("statPendingCount");
+
+        const popRequestBtn = document.getElementById("popRequestBtn");
+
+        let localRequests = [];
+        let activeRequest = null;
+        let currentUser = null;
+
+        // Initialize Leaflet Map
+        const map = L.map("map").setView([28.6139, 77.2090], 12);
+
+        L.tileLayer(
+            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            {
+                attribution: "&copy; OpenStreetMap contributors"
+            }
+        ).addTo(map);
+
+        const hospitalIcon = L.divIcon({
+            className: "custom-hospital-marker",
+            html: `
+                <div style="
+                    width:18px;
+                    height:18px;
+                    border-radius:50%;
+                    background:#dc2626;
+                    border:3px solid white;
+                    box-shadow:0 2px 8px rgba(0,0,0,.25);
+                "></div>
+            `,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+
+        const bankIcon = L.divIcon({
+            className: "custom-bank-marker",
+            html: `
+                <div style="
+                    width:18px;
+                    height:18px;
+                    border-radius:50%;
+                    background:#2563eb;
+                    border:3px solid white;
+                    box-shadow:0 2px 8px rgba(0,0,0,.25);
+                "></div>
+            `,
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+
+        // Add hospital markers
+        const hospitalCoordinates = {
+            H01: { lat: 28.6139, lng: 77.2090 },
+            H02: { lat: 28.6280, lng: 77.2180 },
+            H03: { lat: 28.5355, lng: 77.3910 },
+            H04: { lat: 28.5672, lng: 77.2100 },
+            H05: { lat: 28.4595, lng: 77.0266 },
+            H06: { lat: 28.5672, lng: 77.2430 },
+            H07: { lat: 28.7041, lng: 77.1025 },
+            H08: { lat: 28.6692, lng: 77.4538 },
+            H09: { lat: 28.4089, lng: 77.3178 },
+            H10: { lat: 28.6130, lng: 77.3100 }
+        };
+
+        const hospitalNames = {
+            H01: "City Care Hospital",
+            H02: "Metro General Hospital",
+            H03: "Shanti Medical Centre",
+            H04: "Apollo Demo Hospital",
+            H05: "LifeLine Hospital",
+            H06: "National Trauma Centre",
+            H07: "Green Valley Hospital",
+            H08: "Hope Medical Institute",
+            H09: "Sunrise Hospital",
+            H10: "CarePlus Hospital"
+        };
+
+        const doctorNames = {
+            D01: "Dr. Arjun Sharma",
+            D02: "Dr. Priya Verma",
+            D03: "Dr. Rahul Singh",
+            D04: "Dr. Neha Kapoor",
+            D05: "Dr. Amit Gupta",
+            D06: "Dr. Riya Mehta",
+            D07: "Dr. Karan Malhotra",
+            D08: "Dr. Simran Kaur",
+            D09: "Dr. Aditya Jain",
+            D10: "Dr. Ananya Rao",
+            D11: "Dr. Test Unauthorized",
+            D12: "Dr. Wrong Hospital"
+        };
+
+        Object.entries(hospitalCoordinates).forEach(([hospitalId, coords]) => {
+            L.marker([coords.lat, coords.lng], { icon: hospitalIcon })
+                .addTo(map)
+                .bindPopup(`<strong>${hospitalNames[hospitalId]}</strong><br>${hospitalId}`);
+        });
+
+        // Add blood banks markers
+        const bloodBanks = [
+            { name: "RaktSetu Central Blood Bank", lat: 28.6200, lng: 77.2100 },
+            { name: "LifeBlood Blood Bank", lat: 28.6280, lng: 77.2180 },
+            { name: "National Blood Centre", lat: 28.5672, lng: 77.2430 },
+            { name: "RedCare Blood Bank", lat: 28.5355, lng: 77.3910 },
+            { name: "Hope Blood Services", lat: 28.7041, lng: 77.1025 }
+        ];
+
+        bloodBanks.forEach(bank => {
+            L.marker([bank.lat, bank.lng], { icon: bankIcon })
+                .addTo(map)
+                .bindPopup(`<strong>${bank.name}</strong><br>Blood Bank`);
+        });
+
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 300);
+
+        let activeMapLayers = [];
+
+        function updateMapForRequest(request) {
+            activeMapLayers.forEach(layer => map.removeLayer(layer));
+            activeMapLayers = [];
+
+            if (!request) return;
+
+            const lat = request.hospital_lat;
+            const lng = request.hospital_lng;
+
+            if (lat && lng) {
+                map.setView([lat, lng], 13);
+
+                const activeHospitalIcon = L.divIcon({
+                    className: "active-hospital-marker",
+                    html: `
+                        <div style="
+                            position: relative;
+                            width:22px;
+                            height:22px;
+                            border-radius:50%;
+                            background:#dc2626;
+                            border:3.5px solid white;
+                            box-shadow:0 0 12px rgba(220,38,38,0.7);
+                        ">
+                            <span style="
+                                position: absolute;
+                                top: -3.5px;
+                                left: -3.5px;
+                                width: 22px;
+                                height: 22px;
+                                border-radius: 50%;
+                                background: rgba(220,38,38,0.3);
+                                animation: pulse 1.5s infinite;
+                            "></span>
+                        </div>
+                    `,
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
+                });
+
+                const hospitalMarker = L.marker([lat, lng], { icon: activeHospitalIcon })
+                    .addTo(map)
+                    .bindPopup(`<strong>${request.hospital_name || request.hospital_id}</strong><br>Active Request: ${request.request_id}`);
+
+                activeMapLayers.push(hospitalMarker);
+                hospitalMarker.openPopup();
+            }
+        }
+
+        function drawFulfillmentLines(hospitalCoords, allocations) {
+            allocations.forEach(alloc => {
+                if (alloc.lat && alloc.lng) {
+                    const line = L.polyline([
+                        [hospitalCoords.lat, hospitalCoords.lng],
+                        [alloc.lat, alloc.lng]
+                    ], {
+                        color: '#dc2626',
+                        weight: 3.5,
+                        dashArray: '5, 8',
+                        opacity: 0.85
+                    }).addTo(map);
+
+                    line.bindTooltip(`${alloc.units} units from ${alloc.bank_name || alloc.bank_id}`, { sticky: true });
+                    activeMapLayers.push(line);
+                }
+            });
+        }
+
+        async function fetchCurrentUser() {
+            try {
+                const response = await fetch("/auth/me", { credentials: "same-origin" });
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = "/login";
+                    return;
+                }
+                currentUser = await response.json();
+                
+                const profileAvatar = document.querySelector(".profile-avatar");
+                const profileInfo = document.querySelector(".profile-info strong");
+                if (currentUser) {
+                    if (profileAvatar) profileAvatar.textContent = currentUser.username[0].toUpperCase();
+                    if (profileInfo) profileInfo.textContent = currentUser.username;
+                }
+            } catch (err) {
+                console.error("Failed to fetch current user", err);
+            }
+        }
+
+        async function fetchRequests() {
+            try {
+                const response = await fetch("/requests", { credentials: "same-origin" });
+                if (response.ok) {
+                    localRequests = await response.json();
+                    renderQueue();
+                    updateStats();
+                    if (activeRequest) {
+                        const updated = localRequests.find(r => r.request_id === activeRequest.request_id);
+                        if (updated) {
+                            activeRequest = updated;
+                            renderActiveRequest(activeRequest);
+                            renderPipeline(activeRequest);
+                            renderAuditTrail(activeRequest);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch requests", err);
+            }
+        }
+
+        function firstDefined(...values) {
+            for (const value of values) {
+                if (
+                    value !== undefined &&
+                    value !== null &&
+                    value !== ""
+                ) {
+                    return value;
+                }
+            }
+
+            return null;
+        }
+
+        function getRequestId(data) {
+            return firstDefined(
+                data?.request_id,
+                data?.requestId,
+                data?.id,
+                data?.request?.request_id,
+                data?.request?.requestId,
+                data?.data?.request_id,
+                data?.data?.requestId
+            );
+        }
+
+        function getHospitalId(data) {
+            return firstDefined(
+                data?.hospital_id,
+                data?.hospitalId,
+                data?.hospital?.id,
+                data?.request?.hospital_id,
+                data?.data?.hospital_id
+            );
+        }
+
+        function getHospitalName(data) {
+            const hospitalId = getHospitalId(data);
+
+            return firstDefined(
+                data?.hospital_name,
+                data?.hospitalName,
+                data?.hospital?.name,
+                data?.hospital,
+                data?.request?.hospital_name,
+                hospitalId ? hospitalNames[hospitalId] : null
+            );
+        }
+
+        function getDoctorId(data) {
+            return firstDefined(
+                data?.doctor_id,
+                data?.doctorId,
+                data?.doctor?.id,
+                data?.request?.doctor_id,
+                data?.data?.doctor_id
+            );
+        }
+
+        function getBloodType(data) {
+            return firstDefined(
+                data?.blood_type,
+                data?.bloodType,
+                data?.blood_group,
+                data?.bloodGroup,
+                data?.request?.blood_type,
+                data?.data?.blood_type
+            );
+        }
+
+        function getUnits(data) {
+            return firstDefined(
+                data?.units_needed,
+                data?.unitsNeeded,
+                data?.units,
+                data?.quantity,
+                data?.request?.units_needed,
+                data?.data?.units_needed
+            );
+        }
+
+        function getUrgency(data) {
+            return firstDefined(
+                data?.urgency,
+                data?.urgency_input,
+                data?.urgencyInput,
+                data?.priority,
+                data?.request?.urgency,
+                data?.data?.urgency
+            ) || "critical";
+        }
+
+        function getPrescriptionId(data) {
+            return firstDefined(
+                data?.prescription_id,
+                data?.prescriptionId,
+                data?.prescription?.id,
+                data?.request?.prescription_id,
+                data?.data?.prescription_id
+            );
+        }
+
+        function getClinicalNote(data) {
+            return firstDefined(
+                data?.clinical_note,
+                data?.clinicalNote,
+                data?.clinical_notes,
+                data?.note,
+                data?.request?.clinical_note,
+                data?.data?.clinical_note
+            );
+        }
+
+        function getLatitude(data) {
+            return firstDefined(
+                data?.hospital_lat,
+                data?.hospitalLat,
+                data?.latitude,
+                data?.lat,
+                data?.hospital?.lat,
+                data?.request?.hospital_lat
+            );
+        }
+
+        function getLongitude(data) {
+            return firstDefined(
+                data?.hospital_lng,
+                data?.hospitalLng,
+                data?.longitude,
+                data?.lng,
+                data?.hospital?.lng,
+                data?.request?.hospital_lng
+            );
+        }
+
+        function getTimestamp(data) {
+            return firstDefined(
+                data?.timestamp,
+                data?.created_at,
+                data?.createdAt,
+                data?.submitted_at,
+                data?.request?.timestamp,
+                data?.data?.timestamp
+            );
+        }
+
+        function getVerificationState(data, fallbackStatus) {
+            return firstDefined(
+                data?.verification_state,
+                data?.verificationState,
+                data?.verification_status,
+                data?.verificationStatus,
+                data?.status,
+                fallbackStatus
+            ) || "pending";
+        }
+
+        function normalizeRequest(data, fallback = {}) {
+            const source = data?.request || data?.data || data || {};
+
+            const hospitalId = firstDefined(
+                getHospitalId(source),
+                fallback.hospital_id
+            );
+
+            const doctorId = firstDefined(
+                getDoctorId(source),
+                fallback.doctor_id
+            );
+
+            const normalized = {
+                request_id: firstDefined(
+                    getRequestId(source),
+                    fallback.request_id
+                ),
+
+                hospital_id: hospitalId,
+
+                hospital_name: firstDefined(
+                    getHospitalName(source),
+                    fallback.hospital_name,
+                    hospitalId ? hospitalNames[hospitalId] : null
+                ),
+
+                doctor_id: doctorId,
+
+                doctor_name: firstDefined(
+                    source.doctor_name,
+                    source.doctorName,
+                    doctorId ? doctorNames[doctorId] : null,
+                    fallback.doctor_name
+                ),
+
+                blood_type: firstDefined(
+                    getBloodType(source),
+                    fallback.blood_type
+                ),
+
+                units_needed: firstDefined(
+                    getUnits(source),
+                    fallback.units_needed
+                ),
+
+                urgency: firstDefined(
+                    getUrgency(source),
+                    fallback.urgency,
+                    "critical"
+                ),
+
+                prescription_id: firstDefined(
+                    getPrescriptionId(source),
+                    fallback.prescription_id
+                ),
+
+                clinical_note: firstDefined(
+                    getClinicalNote(source),
+                    fallback.clinical_note
+                ),
+
+                hospital_lat: firstDefined(
+                    getLatitude(source),
+                    fallback.hospital_lat,
+                    hospitalId ? hospitalCoordinates[hospitalId]?.lat : null
+                ),
+
+                hospital_lng: firstDefined(
+                    getLongitude(source),
+                    fallback.hospital_lng,
+                    hospitalId ? hospitalCoordinates[hospitalId]?.lng : null
+                ),
+
+                timestamp: firstDefined(
+                    getTimestamp(source),
+                    fallback.timestamp,
+                    new Date().toLocaleTimeString()
+                ),
+
+                status: firstDefined(
+                    source.status,
+                    fallback.status,
+                    "queued"
+                ),
+
+                verification_state: firstDefined(
+                    getVerificationState(source, fallback.verification_state),
+                    fallback.verification_state,
+                    "pending"
+                ),
+
+                reason: firstDefined(
+                    source.reason,
+                    source.detail,
+                    source.message,
+                    fallback.reason
+                )
+            };
+
+            if (!normalized.hospital_name && normalized.hospital_id) {
+                normalized.hospital_name =
+                    hospitalNames[normalized.hospital_id] ||
+                    normalized.hospital_id;
+            }
+
+            if (!normalized.doctor_name && normalized.doctor_id) {
+                normalized.doctor_name =
+                    doctorNames[normalized.doctor_id] ||
+                    normalized.doctor_id;
+            }
+
+            return normalized;
+        }
+
+        function getErrorMessage(data, response) {
+            return firstDefined(
+                data?.reason,
+                data?.detail,
+                data?.message,
+                data?.error,
+                data?.error_message
+            ) || `Request rejected with status ${response.status}`;
+        }
+
+        function showSimulatorMessage(message, type) {
+            simulatorMessage.textContent = message;
+            simulatorMessage.className =
+                "simulator-message " + type;
+        }
+
+        function clearSimulatorMessage() {
+            simulatorMessage.textContent = "";
+            simulatorMessage.className = "simulator-message";
+        }
+
+        function urgencyClass(urgency) {
+            if (urgency === "critical") {
+                return "red";
+            }
+
+            if (urgency === "urgent") {
+                return "yellow";
+            }
+
+            return "green";
+        }
+
+        function statusClass(status) {
+            const value = String(status || "").toLowerCase();
+
+            if (
+                value.includes("reject") ||
+                value.includes("fail")
+            ) {
+                return "red";
+            }
+
+            if (
+                value.includes("pending") ||
+                value.includes("verification")
+            ) {
+                return "yellow";
+            }
+
+            return "green";
+        }
+
+        function addRequestToLocalQueue(request) {
+            const existingIndex = localRequests.findIndex(
+                item => item.request_id === request.request_id
+            );
+
+            if (existingIndex >= 0) {
+                localRequests[existingIndex] = request;
+            } else {
+                localRequests.unshift(request);
+            }
+
+            renderQueue();
+            updateStats();
+        }
+
+        let queueExpanded = false;
+        function toggleQueueExpand() {
+            queueExpanded = !queueExpanded;
+            renderQueue();
+        }
+
+        function renderQueue() {
+            if (!localRequests.length) {
+                queueListContainer.innerHTML = `
+                    <div class="empty-state">
+                        Queue is empty. Submit a request using the simulator.
+                    </div>
+                `;
+                queueSizeBadge.textContent = "0 items";
+                navQueueCount.textContent = "0";
+                return;
+            }
+
+            const queuedRequests = localRequests.filter(
+                request =>
+                    request.status !== "rejected" &&
+                    request.status !== "pending_clinical_verification"
+            );
+
+            navQueueCount.textContent = queuedRequests.length;
+            queueSizeBadge.textContent = `${localRequests.length} items`;
+
+            const filterVal = document.getElementById('queueStatusFilter')?.value || 'ALL';
+            const searchVal = (document.getElementById('queueSearchInput')?.value || '').toLowerCase();
+
+            let displayList = localRequests.filter(r => {
+                const statusStr = String(r.status || '').toLowerCase();
+                if (filterVal === 'QUEUED' && statusStr !== 'queued' && !statusStr.includes('sent_to_fulfillment')) return false;
+                if (filterVal === 'FULFILLED' && statusStr !== 'fulfilled' && statusStr !== 'partially_fulfilled') return false;
+                if (filterVal === 'PENDING' && !statusStr.includes('pending')) return false;
+
+                if (searchVal) {
+                    const idStr = String(r.request_id || '').toLowerCase();
+                    const hospStr = String(r.hospital_name || r.hospital_id || '').toLowerCase();
+                    const bloodStr = String(r.blood_type || '').toLowerCase();
+                    if (!idStr.includes(searchVal) && !hospStr.includes(searchVal) && !bloodStr.includes(searchVal)) return false;
+                }
+                return true;
+            });
+
+            queueListContainer.innerHTML = "";
+
+            if (displayList.length === 0) {
+                queueListContainer.innerHTML = `
+                    <div class="empty-state">
+                        No matching requests found.
+                    </div>
+                `;
+                return;
+            }
+
+            const limit = queueExpanded ? displayList.length : 5;
+            const visibleItems = displayList.slice(0, limit);
+
+            visibleItems.forEach(request => {
+                const item = document.createElement("div");
+
+                item.className =
+                    "queue-item" +
+                    (
+                        activeRequest &&
+                            activeRequest.request_id === request.request_id
+                            ? " selected"
+                            : ""
+                    );
+
+                item.innerHTML = `
+                    <div>
+                        <strong>
+                            ${escapeHtml(request.request_id || "Pending ID")}
+                        </strong>
+
+                        <span>
+                            ${escapeHtml(request.hospital_name || request.hospital_id || "Hospital")}
+                        </span>
+
+                        <small>
+                            Requires
+                            <b>${request.units_needed ?? 0}</b>
+                            units of
+                            <b>${escapeHtml(request.blood_type || "N/A")}</b>
+                        </small>
+                    </div>
+
+                    <span class="tag ${urgencyClass(request.urgency)}">
+                        ${String(request.urgency || "UNKNOWN").toUpperCase()}
+                    </span>
+                `;
+
+                item.addEventListener("click", () => selectRequest(request));
+                queueListContainer.appendChild(item);
+            });
+
+            if (displayList.length > 5) {
+                const toggleBtn = document.createElement("button");
+                toggleBtn.style.cssText = "width:100%;margin-top:8px;padding:6px;background:#faf7f5;border:1px solid #ede6e0;border-radius:8px;font-size:11px;font-weight:700;color:#8b0000;cursor:pointer;";
+                toggleBtn.textContent = queueExpanded ? `▲ Show Less (5 items)` : `▼ Show All (${displayList.length} items)`;
+                toggleBtn.onclick = toggleQueueExpand;
+                queueListContainer.appendChild(toggleBtn);
+            }
+        }
+
+        function updateStats() {
+            const total = localRequests.length;
+
+            const verified = localRequests.filter(
+                request =>
+                    request.status === "queued" ||
+                    request.verification_state === "Verified & Authorized" ||
+                    request.verification_state === "verified"
+            ).length;
+
+            const rejected = localRequests.filter(
+                request =>
+                    request.status === "rejected" ||
+                    String(request.verification_state || "")
+                        .toLowerCase()
+                        .includes("failed")
+            ).length;
+
+            const pending = localRequests.filter(
+                request =>
+                    request.status === "pending_clinical_verification" ||
+                    String(request.verification_state || "")
+                        .toLowerCase()
+                        .includes("pending")
+            ).length;
+
+            statReceivedCount.textContent = total;
+            statVerifiedCount.textContent = verified;
+            statRejectedCount.textContent = rejected;
+            statPendingCount.textContent = pending;
+        }
+
+        function selectRequest(request) {
+            activeRequest = request;
+
+            renderQueue();
+            renderActiveRequest(request);
+            renderPipeline(request);
+            renderAuditTrail(request);
+            renderAllocation(request);
+            updateMapForRequest(request);
+
+            activeRequestStatus.textContent =
+                String(request.status || "QUEUED")
+                    .replaceAll("_", " ")
+                    .toUpperCase();
+        }
+
+        function renderActiveRequest(request) {
+            if (!request) {
+                activeRequestDetails.className =
+                    "active-request-card empty";
+
+                activeRequestDetails.innerHTML = `
+                    <div class="empty-state">
+                        No request is currently active.
+                    </div>
+                `;
+
+                return;
+            }
+
+            const hospitalName =
+                request.hospital_name ||
+                hospitalNames[request.hospital_id] ||
+                request.hospital_id ||
+                "Hospital";
+
+            const requestId =
+                request.request_id ||
+                "Pending";
+
+            const units =
+                request.units_needed ??
+                0;
+
+            const bloodType =
+                request.blood_type ||
+                "N/A";
+
+            const doctorId =
+                request.doctor_id ||
+                "N/A";
+
+            const prescription =
+                request.prescription_id ||
+                "None Provided";
+
+            const clinicalNote =
+                request.clinical_note ||
+                "No notes provided.";
+
+            const latitude =
+                request.hospital_lat ??
+                "N/A";
+
+            const longitude =
+                request.hospital_lng ??
+                "N/A";
+
+            const timestamp =
+                request.timestamp ||
+                new Date().toLocaleTimeString();
+
+            const verificationState =
+                request.verification_state ||
+                request.status ||
+                "Pending";
+
+            activeRequestDetails.className =
+                "active-request-card has-request";
+
+            activeRequestDetails.innerHTML = `
+                <div class="request-card-top">
+
+                    <div>
+                        <div class="request-card-title">
+                            ${hospitalName}
+                        </div>
+
+                        <div class="request-card-subtitle">
+                            Request ID:
+                            <strong>${requestId}</strong>
+                            |
+                            Timestamp:
+                            ${timestamp}
+                        </div>
+                    </div>
+
+                    <div class="blood-summary">
+                        <strong>${bloodType}</strong>
+                        <span>${units} Units</span>
+                    </div>
+
+                </div>
+
+                <div class="request-meta-grid">
+
+                    <div class="request-meta-item">
+                        <span>Doctor ID</span>
+                        <strong>
+                            ${doctorId}
+                            ${request.doctor_name
+                    ? ` · ${request.doctor_name}`
+                    : ""
+                }
+                        </strong>
+                    </div>
+
+                    <div class="request-meta-item">
+                        <span>Location Coords</span>
+                        <strong>
+                            ${latitude}, ${longitude}
+                        </strong>
+                    </div>
+
+                    <div class="request-meta-item">
+                        <span>Prescription ID</span>
+                        <strong>
+                            ${prescription}
+                        </strong>
+                    </div>
+
+                    <div class="request-meta-item">
+                        <span>Verification State</span>
+                        <strong>
+                            ${verificationState}
+                        </strong>
+                    </div>
+
+                </div>
+
+                <div class="clinical-note-box">
+                    <strong>Clinical Note:</strong>
+                    "${clinicalNote}"
+                </div>
+
+                ${request.reason
+                    ? `
+                            <div class="backend-error-box">
+                                ${request.reason}
+                            </div>
+                        `
+                    : ""
+                }
+            `;
+        }
+
+        function setPipelineStep(
+            stepId,
+            statusId,
+            state,
+            text
+        ) {
+            const step =
+                document.getElementById(stepId);
+
+            const status =
+                document.getElementById(statusId);
+
+            step.classList.remove(
+                "passed",
+                "failed",
+                "pending"
+            );
+
+            if (state) {
+                step.classList.add(state);
+            }
+
+            status.textContent = text;
+        }
+
+        function renderPipeline(request) {
+            if (!request) {
+                setPipelineStep(
+                    "step-hospital",
+                    "val-hospital-status",
+                    "",
+                    "-"
+                );
+
+                setPipelineStep(
+                    "step-doctor",
+                    "val-doctor-status",
+                    "",
+                    "-"
+                );
+
+                setPipelineStep(
+                    "step-prescription",
+                    "val-prescription-status",
+                    "",
+                    "-"
+                );
+
+                setPipelineStep(
+                    "step-priority",
+                    "val-priority-status",
+                    "",
+                    "-"
+                );
+
+                return;
+            }
+
+            const rejected =
+                request.status === "rejected";
+
+            const pending =
+                request.status ===
+                "pending_clinical_verification" ||
+                String(request.verification_state || "")
+                    .toLowerCase()
+                    .includes("pending");
+
+            if (rejected) {
+                setPipelineStep(
+                    "step-hospital",
+                    "val-hospital-status",
+                    "failed",
+                    "Failed"
+                );
+
+                setPipelineStep(
+                    "step-doctor",
+                    "val-doctor-status",
+                    "failed",
+                    "Verification failed"
+                );
+
+                setPipelineStep(
+                    "step-prescription",
+                    "val-prescription-status",
+                    "failed",
+                    "Verification failed"
+                );
+
+                setPipelineStep(
+                    "step-priority",
+                    "val-priority-status",
+                    "failed",
+                    "Request rejected"
+                );
+
+                return;
+            }
+
+            if (pending) {
+                setPipelineStep(
+                    "step-hospital",
+                    "val-hospital-status",
+                    "passed",
+                    "Validated"
+                );
+
+                setPipelineStep(
+                    "step-doctor",
+                    "val-doctor-status",
+                    "passed",
+                    "Authorized"
+                );
+
+                setPipelineStep(
+                    "step-prescription",
+                    "val-prescription-status",
+                    "pending",
+                    "Pending"
+                );
+
+                setPipelineStep(
+                    "step-priority",
+                    "val-priority-status",
+                    "pending",
+                    "Awaiting verification"
+                );
+
+                return;
+            }
+
+            setPipelineStep(
+                "step-hospital",
+                "val-hospital-status",
+                "passed",
+                "Validated"
+            );
+
+            setPipelineStep(
+                "step-doctor",
+                "val-doctor-status",
+                "passed",
+                "Authorized"
+            );
+
+            setPipelineStep(
+                "step-prescription",
+                "val-prescription-status",
+                "passed",
+                request.prescription_id
+                    ? "Valid"
+                    : "Accepted"
+            );
+
+            setPipelineStep(
+                "step-priority",
+                "val-priority-status",
+                "passed",
+                String(request.urgency || "critical")
+                    .toUpperCase()
+            );
+        }
+
+        function renderAuditTrail(request) {
+            if (!request) {
+                auditTrailContainer.innerHTML = `
+                    <div class="empty-state">
+                        Select a request to view its verification events.
+                    </div>
+                `;
+
+                return;
+            }
+
+            const events = [];
+
+            events.push({
+                title: "Request submitted",
+                text: `${request.request_id || "Request"} received by verification engine.`
+            });
+
+            events.push({
+                title: "Hospital validation",
+                text: `${request.hospital_name || request.hospital_id || "Hospital"} validated.`
+            });
+
+            events.push({
+                title: "Doctor authorization",
+                text: `${request.doctor_id || "Doctor"} authorization checked.`
+            });
+
+            events.push({
+                title: "Prescription validation",
+                text: request.prescription_id
+                    ? `Prescription ${request.prescription_id} checked.`
+                    : "No prescription ID supplied."
+            });
+
+            if (request.status === "rejected") {
+                events.push({
+                    title: "Request rejected",
+                    text: request.reason || "Verification failed."
+                });
+            } else if (
+                request.status ===
+                "pending_clinical_verification"
+            ) {
+                events.push({
+                    title: "Clinical verification pending",
+                    text: "Request is awaiting clinical verification."
+                });
+            } else {
+                events.push({
+                    title: "Priority queue",
+                    text: `${String(request.urgency || "critical").toUpperCase()} priority assigned.`
+                });
+            }
+
+            auditTrailContainer.innerHTML =
+                events.map(event => `
+                    <div class="audit-entry">
+                        <strong>${event.title}</strong>
+                        <span>${event.text}</span>
+                    </div>
+                `).join("");
+        }
+
+        function renderAllocation(request) {
+            if (!request) {
+                allocationContainer.innerHTML = `
+                    <div class="empty-state">
+                        Fulfillment options will appear once a request is verified.
+                    </div>
+                `;
+
+                return;
+            }
+
+            if (
+                request.status === "rejected" ||
+                request.status ===
+                "pending_clinical_verification"
+            ) {
+                allocationContainer.innerHTML = `
+                    <div class="empty-state">
+                        Verification failed or is pending. Cannot recommend allocations.
+                    </div>
+                `;
+
+                return;
+            }
+
+            if (request.status === "fulfilled" || request.status === "partially_fulfilled" || request.status === "queued_insufficient_stock") {
+                loadAllocations(request.request_id);
+                return;
+            }
+
+            allocationContainer.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 20px 0;">
+                    <div class="empty-state" style="border:none; margin-bottom:15px; background:none;">
+                        Request verified. Ready to recommend matching allocations.
+                    </div>
+                    <button onclick="fulfillActiveRequest('${request.request_id}')" class="login-button" style="background:#dc2626; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        ⚡ Process & Fulfill Request
+                    </button>
+                </div>
+            `;
+        }
+
+        async function fulfillActiveRequest(requestId) {
+            try {
+                allocationContainer.innerHTML = `
+                    <div class="empty-state">
+                        <span style="display:inline-block; width:16px; height:16px; border:2px solid #dc2626; border-radius:50%; border-top-color:transparent; animation:spin 1s linear infinite; margin-right:8px; vertical-align:middle;"></span>
+                        Processing fulfillment allocations...
+                    </div>
+                `;
+
+                const response = await fetch(`/fullfillment/${requestId}`, {
+                    method: "POST",
+                    credentials: "same-origin"
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail?.message || result.detail || "Fulfillment failed.");
+                }
+
+                // Reload requests
+                await fetchRequests();
+
+                // Select updated request
+                const updatedReq = localRequests.find(r => r.request_id === requestId);
+                if (updatedReq) {
+                    selectRequest(updatedReq);
+                }
+
+                showSimulatorMessage(`Request ${requestId} fulfilled successfully.`, "success");
+            } catch (error) {
+                console.error("Fulfillment error:", error);
+                allocationContainer.innerHTML = `
+                    <div class="empty-state" style="color: #dc2626; border-color: rgba(220,38,38,0.2); background: #fef2f2;">
+                        <strong>Fulfillment Failed:</strong> ${error.message}
+                    </div>
+                `;
+                showSimulatorMessage(`Fulfillment failed for ${requestId}: ${error.message}`, "error");
+            }
+        }
+
+        async function loadAllocations(requestId) {
+            try {
+                allocationContainer.innerHTML = `
+                    <div class="empty-state">
+                        Loading fulfillment details...
+                    </div>
+                `;
+                const response = await fetch(`/requests/${requestId}/allocations`, { credentials: "same-origin" });
+                const result = await response.json();
+                if (response.ok && result.allocations && result.allocations.length > 0) {
+                    renderAllocationSuccess({
+                        request_id: requestId,
+                        units_requested: activeRequest ? activeRequest.units_needed : 0,
+                        units_allocated: result.allocations.reduce((sum, a) => sum + a.units, 0),
+                        allocations: result.allocations
+                    });
+
+                    // Draw map lines
+                    if (activeRequest && activeRequest.hospital_lat && activeRequest.hospital_lng) {
+                        drawFulfillmentLines({
+                            lat: activeRequest.hospital_lat,
+                            lng: activeRequest.hospital_lng
+                        }, result.allocations);
+                    }
+                } else {
+                    allocationContainer.innerHTML = `
+                        <div class="empty-state">
+                            No allocations found for this request.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error("Error loading allocations:", error);
+                allocationContainer.innerHTML = `
+                    <div class="empty-state">
+                        Error loading allocation details.
+                    </div>
+                `;
+            }
+        }
+
+        function renderAllocationSuccess(result) {
+            let html = `
+                <div style="display:flex; flex-direction:column; gap:12px; padding:10px 0;">
+                    <div style="font-size:12px; font-weight:600; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 12px; border-radius:8px;">
+                        ✓ Request Fully Fulfilled (${result.units_allocated}/${result.units_requested} Units)
+                    </div>
+            `;
+
+            result.allocations.forEach(alloc => {
+                html += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1px solid #e1d9d2; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                        <div>
+                            <strong style="display:block; font-size:13px; color:#302b2a;">${alloc.bank_name || alloc.bank_id}</strong>
+                            <span style="font-size:11px; color:#77706c;">Distance: ${alloc.distance_km} km | Expiry: ${alloc.expiry_date}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="tag green" style="font-weight:700; font-size:12px; padding:3px 6px; background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d;">${alloc.units} Units</span>
+                            <span style="display:block; font-size:9px; color:#9c9592; margin-top:4px;">Stock: ${alloc.remaining_stock} left</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            allocationContainer.innerHTML = html;
+        }
+
+        async function submitSimulatorRequest(event) {
+            event.preventDefault();
+
+            clearSimulatorMessage();
+
+            simulatorSubmitButton.disabled = true;
+            simulatorSubmitButton.classList.add(
+                "submit-btn-loading"
+            );
+            simulatorSubmitButton.textContent =
+                "Submitting to Verification Engine...";
+
+            const hospitalId =
+                document.getElementById("simHospital").value;
+
+            const doctorId =
+                document.getElementById("simDoctor").value;
+
+            const bloodType =
+                document.getElementById("simBlood").value;
+
+            const units =
+                Number(
+                    document.getElementById("simUnits").value
+                );
+
+            const urgency =
+                document.getElementById("simUrgency").value;
+
+            const prescriptionId =
+                document
+                    .getElementById("simPrescription")
+                    .value
+                    .trim();
+
+            const clinicalNote =
+                document
+                    .getElementById("simNotes")
+                    .value
+                    .trim();
+
+            const coordinates =
+                hospitalCoordinates[hospitalId] || {
+                    lat: 28.6139,
+                    lng: 77.2090
+                };
+
+            const requestData = {
+                hospital_id: hospitalId,
+                doctor_id: doctorId,
+                blood_type: bloodType,
+                units_needed: units,
+                urgency_input: urgency,
+                hospital_lat: coordinates.lat,
+                hospital_lng: coordinates.lng,
+                prescription_id: prescriptionId,
+                clinical_note: clinicalNote
+            };
+
+            try {
+                const response = await fetch(
+                    "/submit-request",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        credentials: "same-origin",
+                        body: JSON.stringify(requestData)
+                    }
+                );
+
+                let result = {};
+
+                try {
+                    result = await response.json();
+                } catch {
+                    result = {};
+                }
+
+                const fallbackRequest = {
+                    hospital_id: hospitalId,
+                    hospital_name: hospitalNames[hospitalId],
+                    doctor_id: doctorId,
+                    doctor_name: doctorNames[doctorId],
+                    blood_type: bloodType,
+                    units_needed: units,
+                    urgency: urgency,
+                    prescription_id: prescriptionId || null,
+                    clinical_note: clinicalNote,
+                    hospital_lat: coordinates.lat,
+                    hospital_lng: coordinates.lng,
+                    timestamp: new Date().toLocaleTimeString()
+                };
+
+                if (response.status === 403) {
+                    const rejectedRequest =
+                        normalizeRequest(
+                            result,
+                            {
+                                ...fallbackRequest,
+                                status: "rejected",
+                                verification_state:
+                                    "Verification Failed",
+                                reason:
+                                    getErrorMessage(
+                                        result,
+                                        response
+                                    )
+                            }
+                        );
+
+                    rejectedRequest.status =
+                        "rejected";
+
+                    rejectedRequest.reason =
+                        getErrorMessage(
+                            result,
+                            response
+                        );
+
+                    addRequestToLocalQueue(
+                        rejectedRequest
+                    );
+
+                    selectRequest(
+                        rejectedRequest
+                    );
+
+                    showSimulatorMessage(
+                        `Request ${rejectedRequest.request_id ||
+                        "rejected"
+                        } rejected: ${rejectedRequest.reason
+                        }`,
+                        "error"
+                    );
+
+                    return;
+                }
+
+                if (response.status === 202) {
+                    const pendingRequest =
+                        normalizeRequest(
+                            result,
+                            {
+                                ...fallbackRequest,
+                                status:
+                                    "pending_clinical_verification",
+                                verification_state:
+                                    "Pending Clinical Verification"
+                            }
+                        );
+
+                    pendingRequest.status =
+                        "pending_clinical_verification";
+
+                    addRequestToLocalQueue(
+                        pendingRequest
+                    );
+
+                    selectRequest(
+                        pendingRequest
+                    );
+
+                    showSimulatorMessage(
+                        `Request ${pendingRequest.request_id ||
+                        "submitted"
+                        } is pending clinical verification.`,
+                        "pending"
+                    );
+
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        getErrorMessage(
+                            result,
+                            response
+                        )
+                    );
+                }
+
+                const verifiedRequest =
+                    normalizeRequest(
+                        result,
+                        {
+                            ...fallbackRequest,
+                            status: "queued",
+                            verification_state:
+                                "Verified & Authorized"
+                        }
+                    );
+
+                verifiedRequest.status =
+                    "queued";
+
+                verifiedRequest.verification_state =
+                    firstDefined(
+                        verifiedRequest.verification_state,
+                        "Verified & Authorized"
+                    );
+
+                addRequestToLocalQueue(
+                    verifiedRequest
+                );
+
+                selectRequest(
+                    verifiedRequest
+                );
+
+                renderAllocation(
+                    verifiedRequest
+                );
+
+                showSimulatorMessage(
+                    `Request ${verifiedRequest.request_id ||
+                    "submitted"
+                    } verified successfully and added to the priority queue.`,
+                    "success"
+                );
+
+            } catch (error) {
+                console.error(
+                    "SIMULATOR REQUEST ERROR:",
+                    error
+                );
+
+                showSimulatorMessage(
+                    error.message ||
+                    "Unable to submit request to verification engine.",
+                    "error"
+                );
+            } finally {
+                simulatorSubmitButton.disabled =
+                    false;
+
+                simulatorSubmitButton.classList.remove(
+                    "submit-btn-loading"
+                );
+
+                simulatorSubmitButton.textContent =
+                    "📤 Submit to Verification Engine";
+            }
+        }
+
+        async function processNextRequest() {
+            try {
+                popRequestBtn.disabled = true;
+                const response = await fetch("/queue/pop", {
+                    method: "POST",
+                    credentials: "same-origin"
+                });
+
+                if (response.status === 404) {
+                    showSimulatorMessage(
+                        "There are no verified requests waiting in the priority queue.",
+                        "pending"
+                    );
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Unable to pop request from priority queue.");
+                }
+
+                const poppedReq = await response.json();
+                
+                await fetchRequests();
+
+                // Select the request
+                const fullReqObj = localRequests.find(r => r.request_id === poppedReq.request_id) || poppedReq;
+                selectRequest(fullReqObj);
+
+                showSimulatorMessage(
+                    `Processing ${poppedReq.request_id} from the priority queue.`,
+                    "success"
+                );
+
+                document
+                    .getElementById("activeRequestDetails")
+                    .scrollIntoView({
+                        behavior: "smooth",
+                        block: "center"
+                    });
+            } catch (error) {
+                console.error("Pop request error:", error);
+                showSimulatorMessage(error.message, "error");
+            } finally {
+                popRequestBtn.disabled = false;
+            }
+        }
+
+        simulatorForm.addEventListener(
+            "submit",
+            submitSimulatorRequest
+        );
+
+        popRequestBtn.addEventListener(
+            "click",
+            processNextRequest
+        );
+
+        document
+            .getElementById("nav-queue-btn")
+            .addEventListener(
+                "click",
+                function () {
+                    setTimeout(() => {
+                        queueListContainer.scrollIntoView({
+                            behavior: "smooth",
+                            block: "center"
+                        });
+                    }, 50);
+                }
+            );
+
+        // Page initialization
+        async function initPage() {
+            fetchCurrentUser();
+            fetchRequests();
+            loadNetworkInventory();
+            loadExpiryAlerts();
+            // Start polling
+            setInterval(fetchRequests, 5000);
+            setInterval(loadNetworkInventory, 15000);
+            setInterval(loadExpiryAlerts, 30000);
+        }
+
+        // ── Network Inventory Panel & Dropdowns ──────────────────────────────
+        function filterNetworkGrid() {
+            loadNetworkInventory();
+        }
+
+        let bankBreakdownVisible = false;
+        async function toggleNetworkBreakdown() {
+            const container = document.getElementById('bankBreakdownContainer');
+            const btn = document.getElementById('toggleNetBreakdown');
+            if (!container) return;
+            bankBreakdownVisible = !bankBreakdownVisible;
+            if (bankBreakdownVisible) {
+                container.style.display = 'block';
+                btn.textContent = '▲ Hide Breakdown';
+                container.innerHTML = '<div style="text-align:center;padding:12px;font-size:11px;color:#77706c">Loading blood bank breakdown...</div>';
+                try {
+                    const r = await fetch('/banks');
+                    const data = await r.json();
+                    const banks = data.banks || [];
+                    container.innerHTML = `
+                        <div style="font-size:11px;font-weight:700;color:#8b0000;margin-bottom:8px">LIVE NETWORK BLOOD BANKS (${banks.length})</div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+                            ${banks.map(b => `
+                                <div style="background:#fff;border:1px solid #ede6e0;border-radius:8px;padding:10px;font-size:11px;">
+                                    <strong style="color:#302b2a;display:block">${escapeHtml(b.name)} (${escapeHtml(b.bank_id)})</strong>
+                                    <span style="color:#77706c;font-size:10px">${escapeHtml(b.address || 'Registered Network Facility')}</span>
+                                    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:#8b0000;font-weight:700">
+                                        <span>📞 ${escapeHtml(b.contact_number || 'N/A')}</span>
+                                        <span class="tag green" style="font-size:9px;padding:2px 6px">CONNECTED</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } catch(e) {
+                    container.innerHTML = '<div style="color:#dc2626;font-size:11px">Failed to load blood bank breakdown.</div>';
+                }
+            } else {
+                container.style.display = 'none';
+                btn.textContent = '▼ Bank Breakdown';
+            }
+        }
+
+        let expiryVisible = false;
+        function toggleExpiryAlerts() {
+            const sec = document.getElementById('expirySection');
+            const badge = document.getElementById('expiryAlertBadge');
+            if (!sec) return;
+            expiryVisible = !expiryVisible;
+            sec.style.display = expiryVisible ? 'block' : 'none';
+            if (badge) {
+                const text = badge.textContent.replace(' ▾', '').replace(' ▲', '');
+                badge.textContent = text + (expiryVisible ? ' ▲' : ' ▾');
+            }
+        }
+
+        async function loadNetworkInventory() {
+            try {
+                const r = await fetch('/network/inventory');
+                if (!r.ok) return;
+                const data = await r.json();
+                const items = data.inventory || [];
+                const grid = document.getElementById('networkGrid');
+                if (!grid) return;
+                if (items.length === 0) {
+                    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-muted);font-size:12px">No inventory data available.</div>';
+                    return;
+                }
+
+                const filterVal = document.getElementById('netBloodFilter')?.value || 'ALL';
+                let filteredItems = items;
+                if (filterVal === 'UNIVERSAL') {
+                    filteredItems = items.filter(i => i.blood_type === 'O-');
+                } else if (filterVal === 'LOW') {
+                    filteredItems = items.filter(i => i.total_units <= 200);
+                } else if (filterVal === 'HIGH') {
+                    filteredItems = items.filter(i => i.total_units > 500);
+                }
+
+                if (filteredItems.length === 0) {
+                    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:16px;color:var(--text-muted);font-size:11px">No blood groups match the selected filter.</div>';
+                    return;
+                }
+
+                const maxUnits = Math.max(...items.map(i => i.total_units), 1);
+                grid.innerHTML = filteredItems.map(item => {
+                    const pct = Math.min(100, Math.round(item.total_units / maxUnits * 100));
+                    const cls = item.total_units <= 200 ? 'low' : item.total_units >= 600 ? 'good' : '';
+                    return `<div class="net-cell">
+                        <div class="net-cell-type">${escapeHtml(item.blood_type)}</div>
+                        <div class="net-cell-units">${item.total_units}</div>
+                        <div class="net-cell-bar"><div class="net-cell-bar-fill ${cls}" style="width:${pct}%"></div></div>
+                        <div class="net-cell-label">${item.bank_count} bank${item.bank_count!==1?'s':''}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) { console.error('Network inventory error:', e); }
+        }
+
+        async function loadExpiryAlerts() {
+            try {
+                const r = await fetch('/alerts/expiry?days=3');
+                if (!r.ok) return;
+                const data = await r.json();
+                const alerts = data.alerts || [];
+                const badge = document.getElementById('expiryAlertBadge');
+                const list  = document.getElementById('expiryAlertList');
+                if (!alerts.length) { if (badge) badge.style.display='none'; return; }
+                if (badge) {
+                    const arrow = expiryVisible ? ' ▲' : ' ▾';
+                    badge.textContent = `⚠ ${alerts.length} Expiry Alerts${arrow}`;
+                    badge.style.display = 'inline-block';
+                }
+                if (list) list.innerHTML = alerts.map(a => {
+                    const d = Math.round(a.days_until_expiry);
+                    return `<div class="net-exp-row">
+                        <strong style="min-width:32px">${escapeHtml(a.blood_type)}</strong>
+                        <span>${escapeHtml(a.bank_name)}</span>
+                        <span style="margin-left:auto;font-weight:700">${a.units} units</span>
+                        <span style="background:#fde68a;padding:2px 7px;border-radius:999px;font-size:9px;font-weight:800">${a.expiry_date} (${d}d)</span>
+                    </div>`;
+                }).join('');
+            } catch(e) { console.error('Expiry alerts error:', e); }
+        }
+
+        // ── Notifications Center ──
+        async function loadNotifications() {
+            try {
+                const r = await fetch('/notifications');
+                if (!r.ok) return;
+                const d = await r.json();
+                const list = document.getElementById('notifList');
+                if (!list) return;
+                list.innerHTML = d.notifications.map(n => `
+                    <div style="background:#fdfcfb;border:1px solid #eee;border-radius:6px;padding:6px;line-height:1.3">
+                        <strong style="color:#302b2a;display:block">${n.title}</strong>
+                        <span>${n.message}</span>
+                    </div>
+                `).join('');
+            } catch(e) {}
+        }
+
+        function toggleNotifs() {
+            const menu = document.getElementById('notifMenu');
+            if (!menu) return;
+            const isVis = menu.style.display === 'block';
+            menu.style.display = isVis ? 'none' : 'block';
+            if (!isVis) loadNotifications();
+        }
+
+        // ── National Impact Analytics & Emergency Donor Callout ──
+        async function fetchImpactAnalytics() {
+            try {
+                const r = await fetch('/analytics/impact');
+                if (!r.ok) return;
+                const d = await r.json();
+                if (document.getElementById('impactLives')) document.getElementById('impactLives').textContent = d.lives_impacted.toLocaleString() + '+';
+                if (document.getElementById('impactTime')) document.getElementById('impactTime').textContent = d.avg_fulfillment_mins + ' Mins';
+                if (document.getElementById('impactCold')) document.getElementById('impactCold').textContent = d.cold_chain_integrity;
+                if (document.getElementById('impactWaste')) document.getElementById('impactWaste').textContent = d.blood_wastage_rate;
+            } catch(e) { console.error(e); }
+        }
+
+        async function triggerRareDonorBroadcast() {
+            const btype = prompt("Enter Blood Group for Emergency Callout (e.g. O-, Bombay, AB-):", "O-");
+            if (!btype) return;
+            try {
+                const r = await fetch('/donors/callout', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        blood_type: btype,
+                        units_needed: 3,
+                        hospital_name: "Metro General Hospital",
+                        location: "Delhi NCR"
+                    })
+                });
+                const data = await r.json();
+                alert(`🚨 BROADCAST SENT SUCCESSFULLY!\n\n${data.message}\nBroadcast ID: ${data.broadcast_id}`);
+            } catch(e) { alert("Failed to send broadcast."); }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            initPage();
+            fetchImpactAnalytics();
+        });
+
+        // ── Multilingual Indic Engine ──────────────────────────────
+        const I18N = {
+            en: {
+                title: "Dispatcher Console",
+                subtitle: "Monitor verified requests, prioritize emergencies, and coordinate fulfillment.",
+                processNext: "⚡ Process Next Request"
+            },
+            hi: {
+                title: "डिसपैचर कंसोल (RaktSetu)",
+                subtitle: "सत्यापित अनुरोधों की निगरानी करें, आपात स्थिति को प्राथमिकता दें और आपूर्ति समन्वय करें।",
+                processNext: "⚡ अगला अनुरोध संसाधित करें"
+            },
+            ta: {
+                title: "டிஸ்பேட்சர் மையம் (RaktSetu)",
+                subtitle: "சரிபார்க்கப்பட்ட கோரிக்கைகளை கண்காணித்து அவசர நிலையை முன்னிலைப்படுத்தவும்.",
+                processNext: "⚡ அடுத்த கோரிக்கையைச் செயலாக்கு"
+            },
+            te: {
+                title: "డిస్పాచర్ కాన్సోల్ (RaktSetu)",
+                subtitle: "పరిశీలించిన విజ్ఞప్తులను పర్యవేక్షించండి మరియు అత్యవసర రవాణాను నిర్వహించండి.",
+                processNext: "⚡ తదుపరి విజ్ఞప్తిని ప్రక్రియ చేయండి"
+            },
+            bn: {
+                title: "ডিসপ্যাচার কনসোল (RaktSetu)",
+                subtitle: "যাচাইকৃত অনুরোধগুলি পর্যবেক্ষণ করুন এবং জরুরি ভিত্তিতে রক্ত সরবরাহ সমন্বয় করুন।",
+                processNext: "⚡ পরবর্তী অনুরোধ প্রক্রিয়া করুন"
+            },
+            mr: {
+                title: "डिस्पॅचर कन्सोल (RaktSetu)",
+                subtitle: "सत्यापित विनंत्यांचे निरीक्षण करा आणि आणीबाणीच्या पुरवठ्याचे नियोजन करा.",
+                processNext: "⚡ पुढील विनंती प्रक्रियेत घ्या"
+            }
+        };
+
+        function changeLanguage(lang) {
+            const dict = I18N[lang] || I18N.en;
+            const h1 = document.querySelector('.page-heading h1');
+            const p = document.querySelector('.page-heading p');
+            const btn = document.getElementById('popRequestBtn');
+            if (h1) h1.textContent = dict.title;
+            if (p) p.textContent = dict.subtitle;
+            if (btn) btn.textContent = dict.processNext;
+        }
+
+        // ── USSD & GSM Gateway Modal ──────────────────────────────
+        function openUssdModal() {
+            const el = document.getElementById('ussdModal');
+            if (el) el.style.display = 'flex';
+        }
+        function closeUssdModal() {
+            const el = document.getElementById('ussdModal');
+            if (el) el.style.display = 'none';
+        }
+        async function submitUssdRequest() {
+            const cmd = document.getElementById('ussdCommandInput').value.trim();
+            if (!cmd) return;
+            closeUssdModal();
+            try {
+                // Parse GSM SMS format: RAKT REQ [TYPE] [UNITS] [HOSPITAL] [DOCTOR]
+                const parts = cmd.split(' ');
+                const bloodType = parts[2] || 'O-';
+                const units = parseInt(parts[3] || '2', 10);
+                const hospId = parts[4] || 'H01';
+                const docId = parts[5] || 'D01';
+
+                const r = await fetch('/requests/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({
+                        hospital_id: hospId,
+                        doctor_id: docId,
+                        patient_name: "Rural GSM Patient",
+                        blood_type: bloodType,
+                        units_needed: units,
+                        urgency: "critical",
+                        prescription_id: "RX-USSD-RURAL",
+                        clinical_note: "Transmitted via Rural USSD Gateway (*140*RAKT#)"
+                    })
+                });
+                if (r.ok) {
+                    showSimulatorMessage(`📲 Offline USSD Request (${bloodType}, ${units}u) received & verified!`, "success");
+                    await fetchRequests();
+                } else {
+                    showSimulatorMessage("Failed to process USSD command.", "error");
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        // ── ICMR i-Drone Modal ──────────────────────────────
+        function openDroneModal() {
+            const el = document.getElementById('droneModal');
+            if (el) el.style.display = 'flex';
+        }
+        function closeDroneModal() {
+            const el = document.getElementById('droneModal');
+            if (el) el.style.display = 'none';
+        }
+    </script>
+
+    <!-- ── USSD / SMS Rural Access Modal ── -->
+    <div id="ussdModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);z-index:9999;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:90%;max-width:480px;box-shadow:0 10px 30px rgba(0,0,0,0.2);border:1px solid #e5ded8;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h3 style="font-size:16px;color:#302b2a;margin:0;">📱 Rural USSD & GSM Gateway</h3>
+                <button onclick="closeUssdModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#77706c;">✕</button>
+            </div>
+            <p style="font-size:12px;color:#77706c;margin-bottom:14px;">
+                Simulate low-bandwidth emergency blood requests originating from PHCs via feature phone USSD string (<code>*140*RAKT#</code>) or rural GSM SMS.
+            </p>
+            <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:14px;font-size:11px;color:#92400e;">
+                <strong>Standard GSM SMS Format:</strong><br>
+                <code>RAKT REQ [BLOOD_TYPE] [UNITS] [HOSPITAL_ID] [DOCTOR_ID]</code><br>
+                <small style="color:#b45309">Example: <code>RAKT REQ O- 2 H01 D01</code></small>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="display:block;font-size:11px;font-weight:700;color:#302b2a;margin-bottom:4px;">SMS / USSD Command String</label>
+                <input id="ussdCommandInput" type="text" value="RAKT REQ O- 2 H01 D01" style="width:100%;padding:8px 12px;border:1px solid #ede6e0;border-radius:8px;font-family:monospace;font-size:12px;">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="closeUssdModal()" style="padding:7px 14px;border:1px solid #ede6e0;background:#fff;border-radius:8px;font-size:11px;cursor:pointer;">Cancel</button>
+                <button onclick="submitUssdRequest()" style="padding:7px 14px;border:none;background:#d97706;color:#fff;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">📲 Dispatch via GSM Gateway</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Aerial Drone Corridor Telemetry Modal ── -->
+    <div id="droneModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);z-index:9999;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:14px;padding:24px;width:90%;max-width:520px;box-shadow:0 10px 30px rgba(0,0,0,0.2);border:1px solid #e5ded8;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h3 style="font-size:16px;color:#1e40af;margin:0;">🚁 ICMR i-Drone Cold-Chain Telemetry</h3>
+                <button onclick="closeDroneModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#77706c;">✕</button>
+            </div>
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:14px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="font-weight:800;font-size:13px;color:#1e3a8a">Flight Status: IN TRANSIT</span>
+                    <span style="background:#dcfce7;color:#15803d;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:800">COLD-CHAIN OPTIMAL</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;color:#1e40af;margin-top:10px;">
+                    <div><strong>Drone Model:</strong> ICMR SkyShip VTOL v4</div>
+                    <div><strong>Flight Corridor:</strong> B01 ➔ PHC Rampur</div>
+                    <div><strong>GPS Altitude:</strong> 120m (Fixed Corridor)</div>
+                    <div><strong>Flight Distance:</strong> 42.8 km</div>
+                    <div><strong>Battery Level:</strong> 88% (18m remaining)</div>
+                    <div><strong>Storage Temp:</strong> 3.8°C (Range: 2–6°C)</div>
+                </div>
+            </div>
+            <div style="font-size:11px;color:#77706c;margin-bottom:14px;line-height:1.5;">
+                ⚡ <strong>Smart Green Corridor Active:</strong> Automated municipal traffic lights synchronized for emergency ground handover at landing zone.
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="closeDroneModal()" style="padding:7px 14px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;">Close Telemetry</button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/i18n.js"></script>
 </html>

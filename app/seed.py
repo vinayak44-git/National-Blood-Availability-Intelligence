@@ -1,4 +1,5 @@
 from app.database import get_connection
+from app.auth.security import hash_password
 
 
 HOSPITALS = [
@@ -94,6 +95,14 @@ BLOOD_INVENTORY = [
     ("B05", "AB-", 1, "2026-08-26"),
 ]
 
+USERS = [
+    ("U0001", "dispatcher1", "Dispatcher@123", "dispatcher", None, None, None),
+    ("U0002", "provider1", "Provider@123", "provider", None, None, "B01"),
+    ("U0003", "provider2", "Provider@123", "provider", None, None, "B02"),
+    ("U0004", "requester1", "Requester@123", "requester", "H01", "D01", None),
+    ("U0005", "requester2", "Requester@123", "requester", "H02", "D03", None),
+    ("U0006", "patient1", "Patient@123", "patient", None, None, None),
+]
 
 def seed_database():
     conn = get_connection()
@@ -122,6 +131,33 @@ def seed_database():
         (bank_id, blood_type, units, expiry_date, updated_at)
         VALUES (?, ?, ?, ?, datetime('now'))
     """, BLOOD_INVENTORY)
+
+    for user_id, username, password, role, hospital_id, doctor_id, bank_id in USERS:
+        cursor.execute(
+        """
+        INSERT OR IGNORE INTO users
+        (
+            user_id,
+            username,
+            password_hash,
+            role,
+            hospital_id,
+            doctor_id,
+            bank_id,
+            is_active
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        """,
+        (
+            user_id,
+            username,
+            hash_password(password),
+            role,
+            hospital_id,
+            doctor_id,
+            bank_id
+        )
+    )
 
     conn.commit()
     conn.close()

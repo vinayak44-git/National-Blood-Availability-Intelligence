@@ -1,22 +1,276 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RaktSetu | Provider Portal</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta name="description" content="RaktSetu Blood Provider Portal — live inventory and emergency allocation dashboard.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/css/portals.css">
+<style>
+.inv-bar{flex:1;height:7px;border-radius:999px;background:var(--cream-border);overflow:hidden}
+.inv-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blood-red),var(--blood-accent));transition:width .4s}
+.inv-bar-fill.low{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.inv-bar-fill.good{background:linear-gradient(90deg,#15803d,#22c55e)}
+.req-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid var(--cream-border);gap:10px;flex-wrap:wrap}
+.req-row:last-child{border-bottom:none}
+.urg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.urg-dot.critical{background:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.18)}
+.urg-dot.urgent{background:#d97706;box-shadow:0 0 0 3px rgba(217,119,6,.18)}
+.urg-dot.routine{background:#15803d}
+.btn-ok{background:linear-gradient(135deg,#15803d,#22c55e);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:11px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-ok:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(34,197,94,.35)}
+.btn-ship{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:11px;font-weight:700;cursor:pointer;transition:.15s}
+.btn-ship:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,130,246,.35)}
+.bchip{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:var(--blood-light);color:var(--blood-accent);font-weight:800;font-size:10.5px;font-family:Outfit,sans-serif;flex-shrink:0}
+.expbadge{padding:3px 7px;border-radius:999px;font-size:9px;font-weight:800}
+.expbadge.cr{background:#fef2f2;color:#dc2626}
+.expbadge.wa{background:#fffbeb;color:#d97706}
+.expbadge.ok{background:#f0fdf4;color:#15803d}
+.msgbox{display:none;margin:10px 0 0;padding:10px 13px;border-radius:9px;font-size:11.5px;line-height:1.5}
+.msgbox.s{display:block;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d}
+.msgbox.e{display:block;background:#fff5f5;border:1px solid rgba(192,24,43,.18);color:var(--blood-accent)}
+.inv-edit{width:58px;padding:5px 7px;border:1.5px solid var(--cream-border);border-radius:7px;font-size:12px;text-align:center}
+.inv-edit:focus{outline:none;border-color:var(--blood-accent)}
+.empty-l{text-align:center;padding:26px;color:var(--text-muted);font-size:12px;font-style:italic}
+</style>
 </head>
-<body><div class="ambient"></div>
+<body>
+<div class="ambient"></div>
 <div class="portal-shell">
-<aside class="portal-side"><div class="brand"><div class="brand-icon">🩸</div><div><h2>RaktSetu</h2><span>Provider Portal</span></div></div>
-<div class="side-label">BLOOD BANK</div><div class="side-links"><a class="active" href="/provider">📊 Overview</a><a href="#inventory">🧪 Inventory</a><a href="#requests">🚨 Emergency Requests</a><a href="#dispatch">🚚 Dispatch</a></div>
-<div class="side-label">OTHER PORTALS</div><div class="side-links"><a href="/requester">🏥 Requester</a><a href="/dashboard">🚨 Dispatcher</a><a href="/patient">👤 Patient View</a></div>
-<div class="side-footer">Verified provider: B02 · City Blood Center<br>Inventory changes are auditable.</div></aside>
+<aside class="portal-side">
+  <div class="brand"><div class="brand-icon">🩸</div><div><h2>RaktSetu</h2><span>Provider Portal</span></div></div>
+  <div class="side-label">BLOOD BANK</div>
+  <div class="side-links">
+    <a class="active" href="#overview">📊 Overview</a>
+    <a href="#requests">🚨 Requests</a>
+    <a href="#inventory">🧪 Inventory</a>
+    <a href="#dispatch">🚚 Dispatch</a>
+  </div>
+  <div class="side-label">ACCOUNT</div>
+  <div class="side-links"><a href="/login" class="switch-portal">🔐 Switch Portal / Logout</a></div>
+  <div class="side-footer" id="sideFooter">Loading…</div>
+</aside>
 <main class="portal-main">
-<header class="portal-header"><div><div class="eyebrow">VERIFIED BLOOD PROVIDER</div><h1>Provider Portal</h1><p>Manage inventory and respond to verified hospital allocations.</p></div><div class="user-chip">B02 · City Blood Center</div></header>
-<div class="kpi-row"><div class="card stat"><div class="stat-icon">🩸</div><div><strong>12</strong><span>O- units available</span></div></div><div class="card stat"><div class="stat-icon">⚠</div><div><strong>2</strong><span>Units expiring soon</span></div></div><div class="card stat"><div class="stat-icon">🚨</div><div><strong>1</strong><span>Critical allocation</span></div></div></div>
-<section id="requests" class="grid two"><div class="card"><h2>Emergency Allocation</h2><div class="notice"><strong>CRITICAL · R1238</strong><br>Metro General Hospital requires 3 units of O-. Recommended allocation from your bank: <strong>2 units</strong>.</div><div class="status-list" style="margin-top:14px"><div class="status-item"><span>Compatibility</span><span class="tag green">MATCH</span></div><div class="status-item"><span>Stock available</span><strong>12 units</strong></div><div class="status-item"><span>Estimated ETA</span><strong>8 min</strong></div><div class="status-item"><span>Expiry</span><strong>2 days</strong></div></div><div class="action-row"><button class="primary-btn" onclick="alert('Demo: 2 units reserved for R1238.')">Accept & Reserve 2 Units</button><button class="secondary-btn">Reject</button></div></div>
-<div id="inventory" class="card"><h2>Inventory</h2><table class="table"><thead><tr><th>Group</th><th>Units</th><th>Expiry</th></tr></thead><tbody><tr><td>O-</td><td>12</td><td><span class="tag yellow">2 days</span></td></tr><tr><td>O+</td><td>25</td><td>6 days</td></tr><tr><td>A+</td><td>18</td><td>8 days</td></tr><tr><td>B+</td><td>21</td><td>5 days</td></tr></tbody></table></div></section>
-<section id="dispatch" class="card" style="margin-top:18px"><h2>Dispatch Confirmation</h2><p>After reservation, the provider confirms packaging, cold-chain readiness and dispatch handoff.</p><div class="action-row"><button class="secondary-btn">Mark Ready for Dispatch</button><button class="primary-btn">Confirm Dispatch</button></div></section>
-</main></div></body></html>
+  <header class="portal-header">
+    <div>
+      <div class="eyebrow">VERIFIED BLOOD PROVIDER</div>
+      <h1>Provider Portal</h1>
+      <p>Live inventory management and emergency allocation dashboard.</p>
+    </div>
+    <div class="user-chip" id="userChip">Loading…</div>
+  </header>
+
+  <div class="kpi-row" id="overview">
+    <div class="card stat"><div class="stat-icon">🩸</div><div><strong id="kpiTotal">—</strong><span>Total units on hand</span></div></div>
+    <div class="card stat"><div class="stat-icon">⚠️</div><div><strong id="kpiExp">—</strong><span>Expiring ≤3 days</span></div></div>
+    <div class="card stat"><div class="stat-icon">🚨</div><div><strong id="kpiReq">—</strong><span>Pending allocations</span></div></div>
+  </div>
+
+  <section id="requests" class="card" style="margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <h2 style="margin-bottom:0">🚨 Emergency Allocations</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="provReqFilter" onchange="renderReq()" style="padding:5px 9px;border-radius:7px;border:1px solid var(--cream-border);font-size:11px;color:var(--text-dark);">
+          <option value="ALL">All Urgencies</option>
+          <option value="critical">Critical Only</option>
+          <option value="urgent">Urgent Only</option>
+        </select>
+        <input id="provReqSearch" oninput="renderReq()" type="text" placeholder="🔍 Search ID/Hospital..." style="padding:5px 9px;border-radius:7px;border:1px solid var(--cream-border);font-size:11px;width:120px;">
+      </div>
+    </div>
+    <div id="reqMsg" class="msgbox"></div>
+    <div id="reqList"><div class="empty-l">Loading…</div></div>
+  </section>
+
+  <section id="inventory" class="grid two">
+    <div class="card">
+      <h2>🧪 Live Inventory</h2>
+      <p style="margin-bottom:14px;font-size:12px;color:var(--text-muted)">Edit unit counts and click Save to update.</p>
+      <div id="invList"><div class="empty-l">Loading…</div></div>
+    </div>
+    <div class="card" id="dispatch">
+      <h2>🚚 Dispatch &amp; Expiry</h2>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Accept requests above, then use Dispatch to confirm cold-chain handoff.</p>
+      <div class="notice" style="margin-bottom:18px"><strong>Process:</strong> Accept → Pack cold-chain → Dispatch → Audit logged automatically.</div>
+      <h2 style="font-size:14px;margin-bottom:10px">⏰ Expiry Alerts (next 3 days)</h2>
+      <div id="expList"><div class="empty-l">Loading…</div></div>
+    </div>
+  </section>
+</main>
+</div>
+<script>
+let currentUser = null, invData = [], reqData = [];
+async function init() {
+  try {
+    const r = await fetch('/auth/me', {credentials:'same-origin'});
+    if (!r.ok) { window.location.href='/login'; return; }
+    currentUser = await r.json();
+    document.getElementById('userChip').textContent = `${currentUser.bank_id} · ${currentUser.bank_name||'Bank'}`;
+    document.getElementById('sideFooter').textContent = `Provider: ${currentUser.bank_id} · ${currentUser.bank_name||''}`;
+    await Promise.all([loadInv(), loadReq(), loadExpiry()]);
+  } catch(e) { console.error(e); }
+}
+
+async function loadInv() {
+  const r = await fetch('/provider/inventory', {credentials:'same-origin'});
+  const d = await r.json();
+  invData = d.inventory || [];
+  const total = invData.reduce((a,i)=>a+i.units,0);
+  const exp3  = invData.filter(i=>daysUntil(i.expiry_date)<=3).length;
+  document.getElementById('kpiTotal').textContent = total;
+  document.getElementById('kpiExp').textContent   = exp3;
+  const el = document.getElementById('invList');
+  const mx = Math.max(...invData.map(i=>i.units), 1);
+  el.innerHTML = invData.length===0
+    ? '<div class="empty-l">No inventory records.</div>'
+    : invData.map(item=>{
+        const pct = Math.min(100,Math.round(item.units/mx*100));
+        const cls = item.units<=3?'low':item.units>=15?'good':'';
+        const d   = daysUntil(item.expiry_date);
+        const ec  = d<=2?'cr':d<=5?'wa':'ok';
+        return `<div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="bchip">${item.blood_type}</div>
+              <input class="inv-edit" type="number" min="0" value="${item.units}" id="inv-${item.inventory_id}">
+              <span style="font-size:11px;color:var(--text-muted)">units</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px">
+              <span class="expbadge ${ec}">${d}d left</span>
+              <button class="secondary-btn" style="padding:5px 10px;font-size:10px" onclick="saveInv(${item.inventory_id})">Save</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:11px">
+            <div class="inv-bar"><div class="inv-bar-fill ${cls}" style="width:${pct}%"></div></div>
+            <span style="width:28px;text-align:right;font-weight:700">${item.units}</span>
+          </div>
+        </div>`;
+    }).join('');
+}
+
+async function saveInv(id) {
+  const units = parseInt(document.getElementById(`inv-${id}`).value, 10);
+  if (isNaN(units)||units<0) { alert('Invalid value'); return; }
+  const r = await fetch(`/provider/inventory/${id}`, {
+    method:'PUT', credentials:'same-origin',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({units})
+  });
+  if (r.ok) { showMsg('reqMsg','Inventory updated successfully.','s'); await loadInv(); }
+  else { const e=await r.json(); showMsg('reqMsg',e.detail||'Update failed.','e'); }
+}
+
+async function loadReq() {
+  const r = await fetch('/provider/requests', {credentials:'same-origin'});
+  const d = await r.json();
+  reqData = d.requests || [];
+  document.getElementById('kpiReq').textContent = reqData.length;
+  renderReq();
+}
+
+function renderReq() {
+  const el = document.getElementById('reqList');
+  if (!reqData.length) { el.innerHTML='<div class="empty-l">No pending emergency allocations.</div>'; return; }
+  
+  const filterVal = document.getElementById('provReqFilter')?.value || 'ALL';
+  const searchVal = (document.getElementById('provReqSearch')?.value || '').toLowerCase();
+
+  const filtered = reqData.filter(r => {
+    if (filterVal !== 'ALL' && r.urgency !== filterVal) return false;
+    if (searchVal) {
+      const rid = (r.request_id || '').toLowerCase();
+      const hosp = (r.hospital_name || r.hospital_id || '').toLowerCase();
+      const btype = (r.blood_type || '').toLowerCase();
+      if (!rid.includes(searchVal) && !hosp.includes(searchVal) && !btype.includes(searchVal)) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) { el.innerHTML='<div class="empty-l">No matching emergency allocations.</div>'; return; }
+
+  el.innerHTML = filtered.map(r=>{
+    const uc = r.urgency||'routine';
+    const tc = uc==='critical'?'red':uc==='urgent'?'yellow':'green';
+    const canA = r.status==='queued', canD = r.status==='accepted';
+    return `<div class="req-row" id="rr-${r.request_id}">
+      <div class="urg-dot ${uc}"></div>
+      <div class="bchip">${r.blood_type}</div>
+      <div style="flex:1;min-width:110px">
+        <strong style="font-size:12px;display:block">${r.request_id}</strong>
+        <span style="font-size:10.5px;color:var(--text-muted)">${r.hospital_name||r.hospital_id} · ${r.doctor_name||r.doctor_id}</span>
+      </div>
+      <div style="text-align:center">
+        <strong style="display:block;font-size:16px">${r.units_needed}</strong>
+        <span style="font-size:9px;color:var(--text-muted)">UNITS</span>
+      </div>
+      <span class="tag ${tc}">${uc.toUpperCase()}</span>
+      <div style="display:flex;gap:6px">
+        ${canA?`<button class="btn-ok" onclick="acceptReq('${r.request_id}',this)">✓ Accept</button>`:''}
+        ${canD?`<button class="btn-ship" onclick="dispatchReq('${r.request_id}',this)">🚚 Dispatch</button>`:''}
+        ${canA?`<button class="secondary-btn" style="padding:6px 10px;font-size:11px" onclick="skipReq('${r.request_id}')">✗</button>`:''}
+        ${!canA&&!canD?`<span class="tag green">${r.status.replaceAll('_',' ').toUpperCase()}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function acceptReq(id, btn) {
+  btn.disabled=true; btn.textContent='…';
+  const r = await fetch(`/provider/requests/${id}/accept`, {method:'POST',credentials:'same-origin'});
+  const d = await r.json();
+  if (r.ok) { showMsg('reqMsg',`✅ ${id} accepted. ${d.units_allocated} units reserved.`,'s'); await loadReq(); await loadInv(); }
+  else { showMsg('reqMsg',d.detail||'Failed.','e'); btn.disabled=false; btn.textContent='✓ Accept'; }
+}
+
+async function dispatchReq(id, btn) {
+  btn.disabled=true; btn.textContent='…';
+  const r = await fetch(`/provider/requests/${id}/dispatch`, {method:'POST',credentials:'same-origin'});
+  const d = await r.json();
+  if (r.ok) { showMsg('reqMsg',`🚚 ${id} dispatched at ${new Date().toLocaleTimeString()}.`,'s'); await loadReq(); }
+  else { showMsg('reqMsg',d.detail||'Failed.','e'); btn.disabled=false; btn.textContent='🚚 Dispatch'; }
+}
+
+function skipReq(id) {
+  if (!confirm(`Remove ${id} from your queue?`)) return;
+  reqData = reqData.filter(r=>r.request_id!==id);
+  document.getElementById('kpiReq').textContent = reqData.length;
+  renderReq();
+}
+
+async function loadExpiry() {
+  const r = await fetch('/alerts/expiry?days=3', {credentials:'same-origin'});
+  const d = await r.json();
+  const bid = currentUser?.bank_id;
+  const alerts = (d.alerts||[]).filter(a=>a.bank_id===bid);
+  const el = document.getElementById('expList');
+  if (!alerts.length) { el.innerHTML='<div class="empty-l">No items expiring soon. ✓</div>'; return; }
+  el.innerHTML = alerts.map(a=>{
+    const dys = Math.round(a.days_until_expiry);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--cream-border)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="bchip">${a.blood_type}</div>
+        <span style="font-size:12px">${a.units} units</span>
+      </div>
+      <span class="expbadge ${dys<=1?'cr':'wa'}">${a.expiry_date} (${dys}d)</span>
+    </div>`;
+  }).join('');
+}
+
+function daysUntil(d) {
+  return Math.max(0, Math.round((new Date(d)-new Date())/(864e5)));
+}
+function showMsg(id, txt, cls) {
+  const el=document.getElementById(id);
+  if (!el) return;
+  el.textContent=txt; el.className=`msgbox ${cls}`;
+  setTimeout(()=>{el.className='msgbox';},5500);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+setInterval(()=>{ loadReq(); loadInv(); }, 30000);
+</script>
+</body>
+</html>

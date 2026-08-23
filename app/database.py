@@ -155,7 +155,10 @@ def init_db():
                 REFERENCES hospitals(hospital_id),
 
             FOREIGN KEY (doctor_id)
-                REFERENCES doctors(doctor_id)
+                REFERENCES doctors(doctor_id),
+                
+            FOREIGN KEY (bank_id)
+                REFERENCES blood_banks(bank_id)
         )
     """)
         # --------------------------------------------------
@@ -194,6 +197,75 @@ def init_db():
                 REFERENCES blood_banks(bank_id)
         )
     """)
+
+    # --------------------------------------------------
+    # SHIPMENTS TABLE
+    # --------------------------------------------------
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS shipments (
+            shipment_id TEXT PRIMARY KEY,
+            request_id TEXT NOT NULL,
+            provider_id TEXT NOT NULL,
+            vehicle_id TEXT NOT NULL,
+            vehicle_type TEXT DEFAULT 'ambulance',
+            source_lat REAL NOT NULL,
+            source_lng REAL NOT NULL,
+            destination_lat REAL NOT NULL,
+            destination_lng REAL NOT NULL,
+            current_lat REAL,
+            current_lng REAL,
+            status TEXT NOT NULL DEFAULT 'DISPATCHED',
+            eta_minutes INTEGER DEFAULT 15,
+            cold_chain_temp REAL DEFAULT 3.8,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+
+    # --------------------------------------------------
+    # NOTIFICATIONS TABLE
+    # --------------------------------------------------
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            role TEXT NOT NULL DEFAULT 'all',
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            type TEXT NOT NULL DEFAULT 'info',
+            is_read INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    # --------------------------------------------------
+    # DONORS TABLE
+    # --------------------------------------------------
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS donors (
+            donor_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            blood_type TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            lat REAL NOT NULL,
+            lng REAL NOT NULL,
+            is_available INTEGER NOT NULL DEFAULT 1,
+            last_donated TEXT
+        )
+    """)
+
+    # --------------------------------------------------
+    # INDEXES FOR PERFORMANCE
+    # --------------------------------------------------
+
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_requests_status ON blood_requests(status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_requests_urgency ON blood_requests(urgency)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_inventory_bank ON blood_inventory(bank_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_shipments_request ON shipments(request_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_notifications_role ON notifications(role)")
 
     conn.commit()
 

@@ -161,6 +161,20 @@ h4,
     box-shadow: 0 4px 12px rgba(168, 26, 41, 0.3);
 }
 
+.nav-item.nav-switch-portal {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    margin-top: 2px;
+}
+
+.nav-item.nav-switch-portal:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.75);
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: none;
+}
+
 .nav-icon {
     font-size: 16px;
 }

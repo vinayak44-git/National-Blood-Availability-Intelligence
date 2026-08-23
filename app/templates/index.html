@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="title">RaktSetu — National Blood Availability Intelligence Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/portals.css">
+    <style>
+        .hero-section {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 70px 24px 40px;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--blood-light);
+            border: 1px solid rgba(192, 24, 43, 0.2);
+            color: var(--blood-accent);
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 24px;
+        }
+
+        .hero-title {
+            font-size: 52px;
+            font-weight: 900;
+            color: var(--text-dark);
+            line-height: 1.15;
+            margin-bottom: 18px;
+        }
+
+        .hero-title span {
+            color: var(--blood-accent);
+        }
+
+        .hero-desc {
+            font-size: 17px;
+            color: var(--text-muted);
+            max-width: 760px;
+            margin: 0 auto 32px;
+            line-height: 1.6;
+        }
+
+        .hero-btns {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 48px;
+        }
+
+        .main-btn {
+            background: linear-gradient(135deg, var(--blood-accent), var(--blood-red));
+            color: #fff;
+            padding: 12px 26px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            box-shadow: 0 8px 20px rgba(192, 24, 43, 0.25);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .main-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(192, 24, 43, 0.35);
+        }
+
+        .sec-btn {
+            background: var(--cream-card);
+            color: var(--text-dark);
+            border: 1px solid var(--cream-border);
+            padding: 12px 26px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sec-btn:hover {
+            background: #fff;
+            border-color: var(--blood-accent);
+            color: var(--blood-accent);
+            transform: translateY(-2px);
+        }
+
+        .stats-banner {
+            background: var(--cream-card);
+            border: 1px solid var(--cream-border);
+            border-radius: 18px;
+            padding: 24px 32px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 60px;
+            text-align: left;
+        }
+
+        .stat-box label {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .stat-box val {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-dark);
+            font-family: Outfit, sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .viz-box {
+            background: var(--cream-card);
+            border: 1px solid var(--cream-border);
+            border-radius: 20px;
+            padding: 36px;
+            box-shadow: var(--shadow);
+            margin-bottom: 60px;
+        }
+
+        .portals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 60px;
+        }
+
+        .portal-card {
+            background: var(--cream-card);
+            border: 1px solid var(--cream-border);
+            border-radius: 16px;
+            padding: 26px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            transition: all 0.25s ease;
+        }
+
+        .portal-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--blood-accent);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .portal-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--blood-light);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+
+    <header style="background:rgba(252,251,250,0.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--cream-border);padding:16px 36px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;">
+        <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--blood-accent),var(--blood-red));border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;box-shadow:0 4px 12px rgba(192,24,43,0.3)">🩸</div>
+            <div style="font-family:Outfit,sans-serif;font-weight:900;font-size:22px;color:var(--text-dark)">RaktSetu</div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:20px">
+            <a href="#portals" style="color:var(--text-dark);text-decoration:none;font-weight:600;font-size:13px">Portals</a>
+            <a href="/login" style="color:var(--text-dark);text-decoration:none;font-weight:600;font-size:13px">🔐 Login</a>
+            <a href="/register" style="color:var(--text-dark);text-decoration:none;font-weight:600;font-size:13px">📝 Register</a>
+            <a href="/demo" style="color:var(--blood-accent);text-decoration:none;font-weight:700;font-size:13px" data-i18n="judge_demo">🎮 SIH Demo Suite</a>
+
+            <select class="lang-selector" style="background:#fff;border:1px solid var(--cream-border);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--text-dark);cursor:pointer;">
+                <option value="en">🌐 English</option>
+                <option value="hi">🇮🇳 हिन्दी</option>
+                <option value="ta">🇮🇳 தமிழ்</option>
+                <option value="te">🇮🇳 తెలుగు</option>
+                <option value="bn">🇮🇳 বাংলা</option>
+                <option value="mr">🇮🇳 मराठी</option>
+            </select>
+
+            <a href="/dashboard" class="main-btn" style="padding:8px 18px;font-size:12px" data-i18n="open_control">⚡ Dispatcher Console</a>
+        </div>
+    </header>
+
+    <main class="hero-section">
+        <div class="hero-badge">
+            <span style="color:var(--green)">●</span> Smart India Hackathon 2026 — Team SynapTech
+        </div>
+
+        <h1 class="hero-title" data-i18n="hero_title">
+            One Network. Every Unit.<br>
+            <span>Faster Lifesaving Decisions.</span>
+        </h1>
+
+        <p class="hero-desc" data-i18n="hero_sub">
+            RaktSetu connects hospitals, blood banks, and emergency dispatchers through intelligent multi-bank split-fulfillment allocations, AI vitals triage, and live cold-chain telemetry.
+        </p>
+
+        <div class="hero-btns">
+            <a href="/requester" class="main-btn" data-i18n="request_blood">🏥 Request Emergency Blood</a>
+            <a href="/dashboard" class="sec-btn" data-i18n="open_control">⚡ Open Control Center</a>
+            <a href="/demo" class="sec-btn" style="border-color:var(--blood-accent);color:var(--blood-accent)" data-i18n="judge_demo">🎮 Judge Demo Suite</a>
+        </div>
+
+        <div class="stats-banner">
+            <div class="stat-box">
+                <label>Platform Status</label>
+                <val><span style="color:var(--green)">●</span> Online</val>
+            </div>
+            <div class="stat-box">
+                <label>Connected Banks</label>
+                <val id="statBanks">142</val>
+            </div>
+            <div class="stat-box">
+                <label>Units Available</label>
+                <val id="statUnits">1,842</val>
+            </div>
+            <div class="stat-box">
+                <label data-i18n="avg_fulfillment">Avg Fulfillment Time</label>
+                <val style="color:var(--green)">16.4 Mins</val>
+            </div>
+            <div class="stat-box">
+                <label data-i18n="lives_impacted">Lives Impacted</label>
+                <val id="statLives" style="color:var(--blood-accent)">1,420+</val>
+            </div>
+        </div>
+
+        <div class="viz-box" id="workflow">
+            <h2 style="font-size:26px;font-weight:800;margin-bottom:8px">Real-Time Intelligent Blood Allocation Engine</h2>
+            <p style="color:var(--text-muted);font-size:13px;max-width:620px;margin:0 auto 28px">RaktSetu evaluates stock across connected blood banks and calculates single-bank or multi-bank split allocations to fulfill verified hospital orders.</p>
+
+            <svg width="100%" height="220" viewBox="0 0 800 220" fill="none">
+                <circle cx="150" cy="110" r="38" fill="var(--blood-light)" stroke="var(--blood-accent)" stroke-width="3" />
+                <text x="150" y="115" fill="var(--blood-accent)" font-size="13" font-weight="800" text-anchor="middle">HOSPITAL</text>
+
+                <circle cx="400" cy="110" r="46" fill="var(--blood-dark)" stroke="var(--blood-accent)" stroke-width="4" />
+                <text x="400" y="108" fill="#fff" font-size="14" font-weight="900" text-anchor="middle">RAKTSETU</text>
+                <text x="400" y="126" fill="#fca5a5" font-size="10" font-weight="700" text-anchor="middle">AI ENGINE</text>
+
+                <circle cx="650" cy="55" r="30" fill="var(--cream-card)" stroke="#2563eb" stroke-width="2" />
+                <text x="650" y="60" fill="#1e40af" font-size="10" font-weight="800" text-anchor="middle">BANK A (2u)</text>
+
+                <circle cx="650" cy="165" r="30" fill="var(--cream-card)" stroke="#2563eb" stroke-width="2" />
+                <text x="650" y="170" fill="#1e40af" font-size="10" font-weight="800" text-anchor="middle">BANK B (1u)</text>
+
+                <line x1="188" y1="110" x2="354" y2="110" stroke="var(--blood-accent)" stroke-width="2" stroke-dasharray="6 6"/>
+                <line x1="446" y1="96" x2="620" y2="65" stroke="#2563eb" stroke-width="2" stroke-dasharray="6 6"/>
+                <line x1="446" y1="124" x2="620" y2="155" stroke="#2563eb" stroke-width="2" stroke-dasharray="6 6"/>
+            </svg>
+        </div>
+
+        <div id="portals" style="text-align:left;margin-bottom:30px">
+            <h2 style="font-size:28px;font-weight:800;margin-bottom:6px">Platform Access Portals</h2>
+            <p style="color:var(--text-muted);font-size:13px">Launch role-specific portals with built-in ABDM verification & real-time synchronization.</p>
+        </div>
+
+        <div class="portals-grid">
+            <div class="portal-card">
+                <div>
+                    <div class="portal-icon">⚡</div>
+                    <h3 style="font-size:18px;font-weight:800;margin-bottom:6px" data-i18n="dispatcher_console">Dispatcher Console</h3>
+                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">Control room priority queue monitoring, Leaflet route matching, split fulfillment execution, and impact analytics.</p>
+                </div>
+                <a href="/dashboard" class="main-btn" style="text-align:center;justify-content:center">Launch Dashboard →</a>
+            </div>
+
+            <div class="portal-card">
+                <div>
+                    <div class="portal-icon">🏥</div>
+                    <h3 style="font-size:18px;font-weight:800;margin-bottom:6px" data-i18n="requester_portal">Requester Portal</h3>
+                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">For doctors & hospitals to submit clinical requests with AI availability matchmaker & rural USSD/SMS fallback.</p>
+                </div>
+                <a href="/requester" class="main-btn" style="text-align:center;justify-content:center">Launch Requester →</a>
+            </div>
+
+            <div class="portal-card">
+                <div>
+                    <div class="portal-icon">🏬</div>
+                    <h3 style="font-size:18px;font-weight:800;margin-bottom:6px" data-i18n="provider_portal">Provider Portal</h3>
+                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">For blood bank managers to confirm stock reservations, monitor cold-chain temp, and dispatch shipments.</p>
+                </div>
+                <a href="/provider" class="main-btn" style="text-align:center;justify-content:center">Launch Provider →</a>
+            </div>
+
+            <div class="portal-card">
+                <div>
+                    <div class="portal-icon">📱</div>
+                    <h3 style="font-size:18px;font-weight:800;margin-bottom:6px" data-i18n="patient_tracking">Patient Tracking</h3>
+                    <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">Public timeline & live vehicle map for patients and relatives tracking active blood transit.</p>
+                </div>
+                <a href="/patient" class="main-btn" style="text-align:center;justify-content:center">Launch Tracker →</a>
+            </div>
+        </div>
+    </main>
+
+    <footer style="border-top:1px solid var(--cream-border);padding:30px;text-align:center;color:var(--text-muted);font-size:12px;margin-top:40px">
+        RaktSetu © 2026 — National Blood Availability Intelligence Platform | Team SynapTech (SIH 2026)
+    </footer>
+
+    <script src="/static/js/i18n.js"></script>
+    <script>
+        async function fetchStats() {
+            try {
+                const r = await fetch('/analytics/impact');
+                if (!r.ok) return;
+                const d = await r.json();
+                document.getElementById('statLives').textContent = d.lives_impacted.toLocaleString() + '+';
+            } catch(e) {}
+        }
+        window.addEventListener('DOMContentLoaded', fetchStats);
+    </script>
+</body>
+</html>

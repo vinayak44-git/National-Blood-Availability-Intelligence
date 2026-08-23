@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaktSetu — Create Platform Account</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/portals.css">
+    <style>
+        .register-wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+        .register-card { background: var(--cream-card); border: 1px solid var(--cream-border); border-radius: 24px; width: min(480px, 100%); overflow: hidden; box-shadow: var(--shadow-lg); }
+        .register-header { background: linear-gradient(135deg, var(--blood-dark) 0%, var(--blood-red) 60%, var(--blood-accent) 100%); padding: 32px; color: #fff; text-align: center; }
+        .register-body { padding: 32px; }
+        .field-group { margin-bottom: 16px; }
+        .field-group label { display: block; font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .field-group input, .field-group select { width: 100%; padding: 12px 14px; border: 1px solid var(--cream-border); border-radius: 10px; font-size: 13px; font-weight: 600; background: var(--cream-bg); color: var(--text-dark); }
+        .field-group input:focus, .field-group select:focus { border-color: var(--blood-accent); outline: none; background: #fff; }
+        .btn-submit { width: 100%; background: linear-gradient(135deg, var(--blood-accent), var(--blood-red)); color: #fff; border: none; padding: 14px; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(192,24,43,0.3); }
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(192,24,43,0.45); }
+        .quick-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+        .chip-btn { background: var(--cream-bg); border: 1px solid var(--cream-border); padding: 10px; border-radius: 10px; font-size: 11px; font-weight: 700; color: var(--text-dark); cursor: pointer; text-align: center; transition: 0.2s; }
+        .chip-btn:hover { background: var(--blood-light); border-color: var(--blood-accent); color: var(--blood-accent); }
+    </style>
+</head>
+<body>
+    <div class="ambient"></div>
+
+    <div class="register-wrap">
+        <div class="register-card">
+            <div class="register-header">
+                <div style="font-size:36px;margin-bottom:8px">📝</div>
+                <h1 style="font-family:Outfit,sans-serif;font-size:26px;font-weight:900">Create Platform Account</h1>
+                <p style="font-size:12px;opacity:0.85;margin-top:4px">Join the National Blood Availability Intelligence Network.</p>
+            </div>
+
+            <div class="register-body">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                    <span style="font-size:11px;font-weight:800;color:var(--text-muted)">SELECT LANGUAGE</span>
+                    <select class="lang-selector" style="background:var(--cream-bg);border:1px solid var(--cream-border);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--text-dark)">
+                        <option value="en">🌐 English</option>
+                        <option value="hi">🇮🇳 हिन्दी</option>
+                        <option value="ta">🇮🇳 தமிழ்</option>
+                        <option value="te">🇮🇳 తెలుగు</option>
+                        <option value="bn">🇮🇳 বাংলা</option>
+                        <option value="mr">🇮🇳 मराठी</option>
+                    </select>
+                </div>
+
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="field-group">
+                        <label>Account Role</label>
+                        <select id="roleInput" required onchange="toggleFields(this.value)">
+                            <option value="requester">🏥 Requester (Doctor / Hospital)</option>
+                            <option value="dispatcher">⚡ Dispatcher (Control Room Staff)</option>
+                            <option value="provider">🏬 Provider (Blood Bank Manager)</option>
+                            <option value="patient">📱 Patient / Voluntary Relative</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Username / Account ID</label>
+                        <input type="text" id="userInput" placeholder="e.g. dr_ananya_sharma" required>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Password (min. 8 characters)</label>
+                        <input type="password" id="passInput" placeholder="••••••••" required minlength="8">
+                    </div>
+
+                    <div id="extraFields">
+                        <div class="field-group">
+                            <label>ABDM Doctor Registration / License ID</label>
+                            <input type="text" id="doctorInput" placeholder="e.g. MCI-2026-8492" value="D01">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Register Account & Launch →</button>
+                </form>
+
+                <div style="margin-top:24px;border-top:1px solid var(--cream-border);padding-top:18px">
+                    <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px">1-CLICK QUICK REGISTRATION TEST</div>
+                    <div class="quick-chips">
+                        <div class="chip-btn" onclick="fillRegister('dr_sharma', 'Pass@1234', 'requester')">🏥 Dr. Sharma</div>
+                        <div class="chip-btn" onclick="fillRegister('disp_officer', 'Pass@1234', 'dispatcher')">⚡ Dispatcher</div>
+                        <div class="chip-btn" onclick="fillRegister('bank_admin', 'Pass@1234', 'provider')">🏬 Bank Manager</div>
+                        <div class="chip-btn" onclick="fillRegister('patient_user', 'Pass@1234', 'patient')">📱 Patient User</div>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;font-size:12px">
+                        <span style="color:var(--text-muted)">Already have an account?</span>
+                        <a href="/login" style="color:var(--blood-accent);font-weight:800;text-decoration:none">Sign In Here →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/i18n.js"></script>
+    <script>
+        function toggleFields(role) {
+            const extra = document.getElementById('extraFields');
+            if (role === 'requester') {
+                extra.innerHTML = `
+                    <div class="field-group">
+                        <label>ABDM Doctor Registration / License ID</label>
+                        <input type="text" id="doctorInput" placeholder="e.g. MCI-2026-8492" value="D01">
+                    </div>`;
+            } else if (role === 'provider') {
+                extra.innerHTML = `
+                    <div class="field-group">
+                        <label>Blood Bank License / Facility Code</label>
+                        <input type="text" id="bankInput" placeholder="e.g. BB-DEL-01" value="B01">
+                    </div>`;
+            } else {
+                extra.innerHTML = '';
+            }
+        }
+
+        function fillRegister(u, p, r) {
+            const randSuffix = Math.floor(Math.random() * 900) + 100;
+            document.getElementById('userInput').value = u + randSuffix;
+            document.getElementById('passInput').value = p;
+            document.getElementById('roleInput').value = r;
+            toggleFields(r);
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const u = document.getElementById('userInput').value;
+            const p = document.getElementById('passInput').value;
+            const r = document.getElementById('roleInput').value;
+
+            const payload = { username: u, password: p, role: r };
+            if (r === 'requester') {
+                payload.hospital_id = 'H01';
+                payload.doctor_id = 'D01';
+            } else if (r === 'provider') {
+                payload.bank_id = 'B01';
+            }
+
+            try {
+                const res = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert(err.detail || 'Registration failed');
+                    return;
+                }
+
+                // Auto login after registration
+                const loginRes = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username: u, password: p, role: r})
+                });
+
+                if (loginRes.ok) {
+                    if (r === 'dispatcher') window.location.href = '/dashboard';
+                    else if (r === 'requester') window.location.href = '/requester';
+                    else if (r === 'provider') window.location.href = '/provider';
+                    else if (r === 'patient') window.location.href = '/patient';
+                } else {
+                    alert('Registration successful! Please sign in.');
+                    window.location.href = '/login?role=' + r;
+                }
+            } catch(ex) {
+                alert('Network error: ' + ex.message);
+            }
+        }
+    </script>
+</body>
+</html>

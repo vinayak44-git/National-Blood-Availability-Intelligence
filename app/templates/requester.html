@@ -1,40 +1,1045 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>RaktSetu | Requester Portal</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/portals.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>RaktSetu | Requester Portal</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/css/portals.css">
+
+    <style>
+        .request-message {
+            display: none;
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .request-message.success {
+            display: block;
+            background: #effaf2;
+            border: 1px solid #b7e4c1;
+            color: #176b2c;
+        }
+
+        .request-message.error {
+            display: block;
+            background: #fff0f0;
+            border: 1px solid rgba(168, 26, 41, .2);
+            color: var(--blood-accent);
+        }
+
+        .request-message.pending {
+            display: block;
+            background: #fff8e6;
+            border: 1px solid #f1d58a;
+            color: #8a6500;
+        }
+
+        .submit-btn-loading {
+            opacity: .65;
+            cursor: not-allowed;
+        }
+
+        .empty-requests {
+            text-align: center;
+            padding: 25px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+    </style>
 </head>
-<body><div class="ambient"></div>
-<div class="portal-shell">
-<aside class="portal-side"><div class="brand"><div class="brand-icon">🩸</div><div><h2>RaktSetu</h2><span>Requester Portal</span></div></div>
-<div class="side-label">REQUESTER</div><div class="side-links">
-<a class="active" href="/requester">🏥 New Request</a><a href="#requests">📋 My Requests</a><a href="#status">⏱ Request Status</a>
-</div>
-<div class="side-label">OTHER PORTALS</div><div class="side-links"><a href="/provider">🩸 Provider</a><a href="/dashboard">🚨 Dispatcher</a><a href="/patient">👤 Patient View</a></div>
-<div class="side-footer">Authorized hospital / doctor access<br>Clinical verification required before fulfillment.</div></aside>
-<main class="portal-main">
-<header class="portal-header"><div><div class="eyebrow">HOSPITAL / DOCTOR ACCESS</div><h1>Requester Portal</h1><p>Create a clinically authorized blood request and monitor its fulfillment.</p></div><div class="user-chip">H02 · Metro General Hospital · Dr. Rahul Singh</div></header>
-<div class="notice" style="margin-bottom:18px"><strong>Verification policy:</strong> every request requires a verified hospital, authorized doctor and valid clinical prescription/request before it enters the priority queue.</div>
-<section class="grid two">
-<div class="card"><h2>Emergency Blood Request</h2><div class="form-grid">
-<div class="field"><label>Patient ID</label><input value="P10291" placeholder="Hospital patient ID"></div>
-<div class="field"><label>Prescription ID</label><input value="RX10293" placeholder="Prescription / clinical request ID"></div>
-<div class="field"><label>Blood Group</label><select><option>O-</option><option>O+</option><option>A-</option><option>A+</option><option>B-</option><option>B+</option><option>AB-</option><option>AB+</option></select></div>
-<div class="field"><label>Units Needed</label><input type="number" min="1" value="3"></div>
-<div class="field"><label>Clinical Urgency</label><select><option>Critical — life-threatening emergency</option><option>Urgent — serious requirement</option><option>Routine</option><option>Scheduled</option></select></div>
-<div class="field"><label>Request Channel</label><select><option>Hospital Web Portal</option><option>SMS</option><option>IVR / Voice</option></select></div>
-<div class="field full"><label>Clinical Note</label><textarea rows="4">Active internal bleeding, requires transfusion.</textarea></div>
-</div><div class="action-row"><button class="primary-btn" onclick="alert('Demo request created. Verification layer will validate hospital, doctor and prescription.')">Submit Verified Request</button><button class="secondary-btn">Save Draft</button></div></div>
-<div class="card"><h2>Request Lifecycle</h2><div class="timeline">
-<div class="timeline-item"><strong>1. Request submitted</strong><small>Hospital / authorized doctor</small></div>
-<div class="timeline-item"><strong>2. Clinical verification</strong><small>Hospital, doctor and prescription checks</small></div>
-<div class="timeline-item"><strong>3. Urgency prioritized</strong><small>Critical cases enter the highest-priority queue</small></div>
-<div class="timeline-item"><strong>4. Fulfillment matched</strong><small>Blood banks evaluated across quantity, compatibility, distance, expiry and ETA</small></div>
-<div class="timeline-item"><strong>5. Provider confirmation</strong><small>Blood bank confirms reservation and dispatch</small></div>
-</div></div>
-</section>
-<section id="requests" class="card" style="margin-top:18px"><h2>Recent Requests</h2><table class="table"><thead><tr><th>Request</th><th>Blood</th><th>Units</th><th>Priority</th><th>Status</th></tr></thead><tbody><tr><td>R1238</td><td>O-</td><td>3</td><td><span class="tag red">CRITICAL</span></td><td><span class="tag green">VERIFIED & QUEUED</span></td></tr><tr><td>R1231</td><td>A+</td><td>2</td><td><span class="tag yellow">URGENT</span></td><td><span class="tag green">FULFILLED</span></td></tr></tbody></table></section>
-</main></div></body></html>
+
+<body>
+
+    <div class="ambient"></div>
+
+    <div class="portal-shell">
+
+        <aside class="portal-side">
+
+            <div class="brand">
+                <div class="brand-icon">🩸</div>
+
+                <div>
+                    <h2>RaktSetu</h2>
+                    <span>Requester Portal</span>
+                </div>
+            </div>
+
+            <div class="side-label">REQUESTER</div>
+
+            <div class="side-links">
+                <a class="active" href="/requester">
+                    🏥 New Request
+                </a>
+
+                <a href="#requests">
+                    📋 My Requests
+                </a>
+
+                <a href="#status">
+                    ⏱ Request Status
+                </a>
+
+                <a href="#smsSimulator">
+                    📱 SMS / Rural Access
+                </a>
+            </div>
+
+            <div class="side-label">ACCOUNT</div>
+
+            <div class="side-links">
+                <a href="/login" class="switch-portal">
+                    🔐 Switch Portal / Logout
+                </a>
+            </div>
+
+            <div class="side-footer">
+                Authorized hospital / doctor access only.
+                <br>
+                Clinical verification required before fulfillment.
+            </div>
+
+        </aside>
+
+        <main class="portal-main">
+
+            <header class="portal-header">
+
+                <div>
+
+                    <div class="eyebrow">
+                        HOSPITAL / DOCTOR ACCESS
+                    </div>
+
+                    <h1>
+                        Requester Portal
+                    </h1>
+
+                    <p>
+                        Create a clinically authorized blood request and monitor its fulfillment.
+                    </p>
+
+                </div>
+
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div class="user-chip" style="display:flex;align-items:center;gap:6px;">
+                        <span style="color:#16a34a;font-weight:800">✓ ABDM VERIFIED</span> · H02 · Metro General Hospital · Dr. Rahul Singh
+                    </div>
+                    <select id="reqLangSelector" class="lang-selector" style="background:#fff;border:1px solid var(--cream-border);border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;color:var(--text-dark);cursor:pointer;">
+                        <option value="en">🌐 English</option>
+                        <option value="hi">🇮🇳 हिन्दी</option>
+                        <option value="ta">🇮🇳 தமிழ்</option>
+                        <option value="te">🇮🇳 తెలుగు</option>
+                        <option value="bn">🇮🇳 বাংলা</option>
+                        <option value="mr">🇮🇳 मराठी</option>
+                    </select>
+                </div>
+
+            </header>
+
+            <div class="notice" style="margin-bottom:18px">
+
+                <strong>Verification policy:</strong>
+
+                every request requires a verified hospital,
+                authorized doctor and valid clinical prescription/request
+                before it enters the priority queue.
+
+            </div>
+
+            <section class="grid two">
+
+                <div class="card">
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <h2 style="margin-bottom:0">
+                            Emergency Blood Request
+                        </h2>
+                        <button type="button" onclick="runAiAutoTriage()" style="background:#15803d;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;">
+                            🤖 AI Vitals Triage
+                        </button>
+                    </div>
+
+                    <!-- AI Smart Clinical Assistant Box -->
+                    <div id="aiMatchPanel" style="background:linear-gradient(135deg, #f0fdf4, #ecfdf5);border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                            <span style="font-size:11px;font-weight:800;color:#15803d;letter-spacing:0.5px;text-transform:uppercase;">🤖 AI CLINICAL MATCHMAKER</span>
+                            <span class="tag green" style="font-size:9px;padding:2px 6px">LIVE PREDICTION</span>
+                        </div>
+                        <div id="aiMatchText" style="font-size:11.5px;color:#166534;line-height:1.4;">
+                            Evaluating national stock feasibility...
+                        </div>
+                    </div>
+
+                    <form id="requestForm">
+
+                        <div class="form-grid">
+
+                            <div class="field">
+
+                                <label for="patientId">
+                                    Patient ID
+                                </label>
+
+                                <input id="patientId" type="text" value="P10291" placeholder="Hospital patient ID"
+                                    required>
+
+                            </div>
+
+                            <div class="field">
+
+                                <label for="prescriptionId">
+                                    Prescription ID
+                                </label>
+
+                                <input id="prescriptionId" type="text" value="RX10293"
+                                    placeholder="Prescription / clinical request ID" required>
+
+                            </div>
+
+                            <div class="field">
+
+                                <label for="bloodType">
+                                    Blood Group
+                                </label>
+
+                                <select id="bloodType" required>
+
+                                    <option value="O-">O-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="A+">A+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="AB+">AB+</option>
+
+                                </select>
+
+                            </div>
+
+                            <div class="field">
+
+                                <label for="unitsNeeded">
+                                    Units Needed
+                                </label>
+
+                                <input id="unitsNeeded" type="number" min="1" value="3" required>
+
+                            </div>
+
+                            <div class="field">
+
+                                <label for="urgency">
+                                    Clinical Urgency
+                                </label>
+
+                                <select id="urgency" required>
+
+                                    <option value="critical">
+                                        Critical — life-threatening emergency
+                                    </option>
+
+                                    <option value="urgent">
+                                        Urgent — serious requirement
+                                    </option>
+
+                                    <option value="routine">
+                                        Routine
+                                    </option>
+
+                                    <option value="scheduled">
+                                        Scheduled
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                            <div class="field">
+
+                                <label for="requestChannel">
+                                    Request Channel
+                                </label>
+
+                                <select id="requestChannel">
+
+                                    <option value="web">
+                                        Hospital Web Portal
+                                    </option>
+
+                                    <option value="sms">
+                                        SMS
+                                    </option>
+
+                                    <option value="ivr">
+                                        IVR / Voice
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                            <div class="field full">
+
+                                <label for="clinicalNote">
+                                    Clinical Note
+                                </label>
+
+                                <textarea id="clinicalNote" rows="4" placeholder="Enter clinical information"
+                                    required>Active internal bleeding, requires transfusion.</textarea>
+
+                            </div>
+
+                        </div>
+
+                        <div class="action-row">
+
+                            <button type="submit" class="primary-btn" id="submitRequestButton">
+                                Submit Verified Request
+                            </button>
+
+                            <button type="button" class="secondary-btn" id="saveDraftButton">
+                                Save Draft
+                            </button>
+
+                        </div>
+
+                        <div id="requestMessage" class="request-message"></div>
+
+                    </form>
+
+                </div>
+
+                <div class="card">
+
+                    <h2>
+                        Request Lifecycle
+                    </h2>
+
+                    <div class="timeline">
+
+                        <div class="timeline-item">
+
+                            <strong>
+                                1. Request submitted
+                            </strong>
+
+                            <small>
+                                Hospital / authorized doctor
+                            </small>
+
+                        </div>
+
+                        <div class="timeline-item">
+
+                            <strong>
+                                2. Clinical verification
+                            </strong>
+
+                            <small>
+                                Hospital, doctor and prescription checks
+                            </small>
+
+                        </div>
+
+                        <div class="timeline-item">
+
+                            <strong>
+                                3. Urgency prioritized
+                            </strong>
+
+                            <small>
+                                Critical cases enter the highest-priority queue
+                            </small>
+
+                        </div>
+
+                        <div class="timeline-item">
+
+                            <strong>
+                                4. Fulfillment matched
+                            </strong>
+
+                            <small>
+                                Blood banks evaluated across quantity,
+                                compatibility, distance, expiry and ETA
+                            </small>
+
+                        </div>
+
+                        <div class="timeline-item">
+
+                            <strong>
+                                5. Provider confirmation
+                            </strong>
+
+                            <small>
+                                Blood bank confirms reservation and dispatch
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+            <section id="requests" class="card" style="margin-top:18px">
+
+                <h2>
+                    Recent Requests
+                </h2>
+
+                <table class="table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Request</th>
+                            <th>Blood</th>
+                            <th>Units</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="requestsTableBody">
+
+                        <tr class="empty-requests-row">
+
+                            <td colspan="5" class="empty-requests">
+                                No requests submitted yet.
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </section>
+
+            <!-- ── SMS / Rural Access Simulator ── -->
+            <section id="smsSimulator" class="card" style="margin-top:20px">
+
+                <h2>📱 Rural SMS Access Simulator</h2>
+
+                <div class="notice" style="margin:14px 0">
+                    <strong>How rural access works:</strong> Registered healthcare facilities in low-connectivity areas
+                    can submit blood requests via SMS using a simple structured format.
+                    The same verification + fulfillment pipeline runs automatically.
+                </div>
+
+                <div class="grid two" style="margin-top:18px;gap:18px">
+                    <div>
+                        <h2 style="font-size:13px;margin-bottom:10px">Send SMS Request</h2>
+                        <div class="field">
+                            <label>SMS Message</label>
+                            <input id="smsMsg" type="text" value="REQ O- 3 H02"
+                                   placeholder="REQ O- 3 H02" style="font-family:monospace;font-size:13px">
+                        </div>
+                        <div class="field">
+                            <label>Sender (simulated phone / sender ID)</label>
+                            <input id="smsSender" type="text" value="RURAL-HEALTH-01" placeholder="e.g. +91-9876543210">
+                        </div>
+                        <button class="primary-btn" id="smsSendBtn" onclick="sendSMS()" style="width:100%;margin-top:8px">📤 Send SMS Request</button>
+
+                        <div style="margin-top:18px">
+                            <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:1px;margin-bottom:8px">QUICK EXAMPLES</div>
+                            <div style="display:flex;flex-direction:column;gap:6px">
+                                <button class="secondary-btn" style="text-align:left;font-family:monospace;font-size:11px" onclick="setSmsMsg('REQ O- 3 H02')">REQ O- 3 H02</button>
+                                <button class="secondary-btn" style="text-align:left;font-family:monospace;font-size:11px" onclick="setSmsMsg('REQ B+ 2 H01')">REQ B+ 2 H01</button>
+                                <button class="secondary-btn" style="text-align:left;font-family:monospace;font-size:11px" onclick="setSmsMsg('REQ AB+ 5 110001')">REQ AB+ 5 110001</button>
+                                <button class="secondary-btn" style="text-align:left;font-family:monospace;font-size:11px" onclick="setSmsMsg('REQ INVALID FORMAT')">REQ INVALID FORMAT</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 style="font-size:13px;margin-bottom:10px">System Response</h2>
+                        <div id="smsResponseArea" style="
+                            background:#111;color:#22c55e;font-family:monospace;font-size:11.5px;
+                            border-radius:12px;padding:16px;line-height:1.8;min-height:180px;
+                            border:1px solid #222;white-space:pre-wrap
+                        ">Awaiting SMS input…</div>
+                        <div id="smsStatus" style="display:none;margin-top:10px;padding:10px 13px;border-radius:9px;font-size:11.5px"></div>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px;padding-top:16px;border-top:1px dashed var(--cream-border)">
+                    <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:1px;margin-bottom:10px">SMS FORMAT REFERENCE</div>
+                    <div class="grid two" style="gap:10px">
+                        <div style="padding:12px;border:1px solid var(--cream-border);border-radius:10px;background:var(--cream-highlight);font-family:monospace;font-size:11px">
+                            <strong style="display:block;margin-bottom:5px;font-family:Inter,sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.5px">Blood Request</strong>
+                            REQ &lt;blood_type&gt; &lt;units&gt; &lt;hospital_code&gt;
+                            <br><br>
+                            REQ O- 3 H02<br>
+                            REQ B+ 2 110001
+                        </div>
+                        <div style="padding:12px;border:1px solid var(--cream-border);border-radius:10px;background:var(--cream-highlight);font-family:monospace;font-size:11px">
+                            <strong style="display:block;margin-bottom:5px;font-family:Inter,sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.5px">Status Check</strong>
+                            STATUS &lt;request_id&gt;
+                            <br><br>
+                            STATUS R1238<br>
+                            STATUS R1245
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script>
+
+        const requestForm =
+            document.getElementById("requestForm");
+
+        const submitRequestButton =
+            document.getElementById("submitRequestButton");
+
+        const requestMessage =
+            document.getElementById("requestMessage");
+
+        const requestsTableBody =
+            document.getElementById("requestsTableBody");
+
+        let currentUser = null;
+
+        async function initPage() {
+            try {
+                const userResp = await fetch("/auth/me", { credentials: "same-origin" });
+                if (userResp.status === 401 || userResp.status === 403) {
+                    window.location.href = "/login";
+                    return;
+                }
+                currentUser = await userResp.json();
+                
+                const userChip = document.querySelector(".user-chip");
+                if (userChip && currentUser) {
+                    userChip.textContent = `${currentUser.hospital_id} · ${currentUser.hospital_name || 'Hospital'} · ${currentUser.doctor_name || 'Doctor'}`;
+                }
+
+                const reqsResp = await fetch("/requests", { credentials: "same-origin" });
+                if (reqsResp.ok) {
+                    const allReqs = await reqsResp.json();
+                    const myReqs = allReqs.filter(r => r.hospital_id === currentUser.hospital_id);
+                    if (myReqs.length > 0) {
+                        const emptyRow = document.querySelector(".empty-requests-row");
+                        if (emptyRow) emptyRow.remove();
+                        myReqs.forEach(r => {
+                            addRequestToTable(r, r.status);
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Initialization error:", err);
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", initPage);
+
+
+        function showMessage(message, type) {
+
+            requestMessage.textContent = message;
+
+            requestMessage.className =
+                "request-message " + type;
+
+            requestMessage.style.display = "block";
+        }
+
+
+        function addRequestToTable(request, status) {
+
+            const emptyRow =
+                document.querySelector(".empty-requests-row");
+
+            if (emptyRow) {
+                emptyRow.remove();
+            }
+
+            const urgency =
+                request.urgency || "routine";
+
+            let priorityClass = "yellow";
+
+            if (urgency === "critical") {
+                priorityClass = "red";
+            }
+
+            if (
+                urgency === "routine" ||
+                urgency === "scheduled"
+            ) {
+                priorityClass = "green";
+            }
+
+            let statusClass = "green";
+
+            if (
+                status === "pending_clinical_verification"
+            ) {
+                statusClass = "yellow";
+            }
+
+            if (status === "rejected") {
+                statusClass = "red";
+            }
+
+            const requestId =
+                request.request_id || "N/A";
+
+            const bloodType =
+                request.blood_type || "N/A";
+
+            const units =
+                request.units_needed ?? "N/A";
+
+            const displayStatus =
+                String(status)
+                    .replaceAll("_", " ")
+                    .toUpperCase();
+
+            const row =
+                document.createElement("tr");
+
+            row.innerHTML = `
+            <td>${requestId}</td>
+
+            <td>${bloodType}</td>
+
+            <td>${units}</td>
+
+            <td>
+                <span class="tag ${priorityClass}">
+                    ${urgency.toUpperCase()}
+                </span>
+            </td>
+
+            <td>
+                <span class="tag ${statusClass}">
+                    ${displayStatus}
+                </span>
+            </td>
+        `;
+
+            requestsTableBody.prepend(row);
+        }
+
+
+        requestForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                submitRequestButton.disabled = true;
+
+                submitRequestButton.classList.add(
+                    "submit-btn-loading"
+                );
+
+                submitRequestButton.textContent =
+                    "Submitting Request...";
+
+                requestMessage.style.display = "none";
+
+
+                const requestData = {
+
+                    hospital_id: currentUser ? currentUser.hospital_id : "H02",
+
+                    doctor_id: currentUser ? currentUser.doctor_id : "D03",
+
+                    blood_type:
+                        document.getElementById(
+                            "bloodType"
+                        ).value,
+
+                    units_needed:
+                        Number(
+                            document.getElementById(
+                                "unitsNeeded"
+                            ).value
+                        ),
+
+                    urgency_input:
+                        document.getElementById(
+                            "urgency"
+                        ).value,
+
+                    hospital_lat: currentUser && currentUser.hospital_lat ? currentUser.hospital_lat : 28.6280,
+
+                    hospital_lng: currentUser && currentUser.hospital_lng ? currentUser.hospital_lng : 77.2180,
+
+                    prescription_id:
+                        document.getElementById(
+                            "prescriptionId"
+                        ).value.trim(),
+
+                    clinical_note:
+                        document.getElementById(
+                            "clinicalNote"
+                        ).value.trim()
+
+                };
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            "/submit-request",
+                            {
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                credentials:
+                                    "same-origin",
+
+                                body:
+                                    JSON.stringify(
+                                        requestData
+                                    )
+                            }
+                        );
+
+
+                    let result;
+
+                    try {
+
+                        result =
+                            await response.json();
+
+                    } catch {
+
+                        throw new Error(
+                            "Server returned an invalid response."
+                        );
+
+                    }
+
+
+                    if (response.status === 401) {
+
+                        showMessage(
+                            "Your session has expired. Please log in again.",
+                            "error"
+                        );
+
+                        return;
+                    }
+
+
+                    if (response.status === 403) {
+
+                        addRequestToTable(
+                            {
+                                request_id:
+                                    result.request_id,
+
+                                blood_type:
+                                    requestData.blood_type,
+
+                                units_needed:
+                                    requestData.units_needed,
+
+                                urgency:
+                                    requestData.urgency_input
+                            },
+                            "rejected"
+                        );
+
+                        showMessage(
+                            `Request ${result.request_id || ""} rejected: ${result.reason || result.detail || "Verification failed."}`,
+                            "error"
+                        );
+
+                        return;
+                    }
+
+
+                    if (response.status === 202) {
+
+                        addRequestToTable(
+                            {
+                                request_id:
+                                    result.request_id,
+
+                                blood_type:
+                                    requestData.blood_type,
+
+                                units_needed:
+                                    requestData.units_needed,
+
+                                urgency:
+                                    requestData.urgency_input
+                            },
+                            "pending_clinical_verification"
+                        );
+
+                        showMessage(
+                            `Request ${result.request_id || ""} is pending clinical verification.`,
+                            "pending"
+                        );
+
+                        return;
+                    }
+
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            result.detail ||
+                            result.reason ||
+                            "Unable to submit request."
+                        );
+
+                    }
+
+
+                    addRequestToTable(
+                        result,
+                        "queued"
+                    );
+
+
+                    showMessage(
+                        `Request ${result.request_id} verified successfully and added to the priority queue.`,
+                        "success"
+                    );
+
+
+                    requestForm.reset();
+
+
+                    document.getElementById(
+                        "unitsNeeded"
+                    ).value = 3;
+
+
+                    document.getElementById(
+                        "bloodType"
+                    ).value = "O-";
+
+
+                    document.getElementById(
+                        "urgency"
+                    ).value = "critical";
+
+
+                    document.getElementById(
+                        "clinicalNote"
+                    ).value =
+                        "Active internal bleeding, requires transfusion.";
+
+                }
+
+                catch (error) {
+
+                    console.error(
+                        "REQUEST ERROR:",
+                        error
+                    );
+
+                    showMessage(
+                        error.message ||
+                        "Unable to submit blood request.",
+                        "error"
+                    );
+
+                }
+
+                finally {
+
+                    submitRequestButton.disabled =
+                        false;
+
+                    submitRequestButton.classList.remove(
+                        "submit-btn-loading"
+                    );
+
+                    submitRequestButton.textContent =
+                        "Submit Verified Request";
+
+                }
+
+            }
+        );
+
+
+        document
+            .getElementById("saveDraftButton")
+            .addEventListener(
+                "click",
+                function () {
+
+                    showMessage(
+                        "Draft saved locally. Backend draft storage will be added later.",
+                        "pending"
+                    );
+
+                }
+            );
+
+        // ── SMS Simulator ────────────────────────────────────────
+        function setSmsMsg(msg) {
+            document.getElementById('smsMsg').value = msg;
+        }
+
+        async function sendSMS() {
+            const msg    = document.getElementById('smsMsg').value.trim();
+            const sender = document.getElementById('smsSender').value.trim() || 'UNKNOWN';
+            const btn    = document.getElementById('smsSendBtn');
+            const resp   = document.getElementById('smsResponseArea');
+            const stat   = document.getElementById('smsStatus');
+
+            if (!msg) { alert('Enter an SMS message.'); return; }
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Sending…';
+            resp.textContent = '[ Processing SMS request… ]';
+            stat.style.display = 'none';
+
+            try {
+                const r = await fetch('/sms/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg, sender })
+                });
+                const data = await r.json();
+
+                // Show terminal-style SMS response
+                resp.textContent = data.sms_response || '[ No response ]';
+
+                // Status badge
+                const sc = data.status || 'unknown';
+                const isGood = ['fulfilled','found'].includes(sc);
+                const isWarn = sc === 'queued_insufficient_stock';
+                stat.textContent = `Status: ${sc.replace(/_/g,' ').toUpperCase()}${data.request_id ? '  ·  Req ID: ' + data.request_id : ''}`;
+                stat.style.display = 'block';
+                stat.style.background = isGood ? '#f0fdf4' : isWarn ? '#fffbeb' : '#fff5f5';
+                stat.style.border = `1px solid ${isGood ? '#bbf7d0' : isWarn ? '#fde68a' : 'rgba(192,24,43,.18)'}`;
+                stat.style.color  = isGood ? '#15803d' : isWarn ? '#a16207' : '#a81a29';
+            } catch(e) {
+                resp.textContent = '[ Error connecting to backend ]';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📤 Send SMS Request';
+            }
+        }
+
+        // ── AI Smart Clinical Matchmaker Engine ──────────────────────────────
+        async function updateAiMatchmaker() {
+            const bloodType = document.getElementById('bloodType').value;
+            const units = parseInt(document.getElementById('unitsNeeded').value || '1', 10);
+            const panelText = document.getElementById('aiMatchText');
+
+            if (!panelText) return;
+
+            panelText.innerHTML = `🤖 <em>Analyzing live network inventory for ${units} units of ${bloodType}...</em>`;
+
+            try {
+                const r = await fetch('/network/inventory');
+                if (!r.ok) return;
+                const data = await r.json();
+                const inv = data.inventory || [];
+                const matched = inv.find(i => i.blood_type === bloodType);
+
+                if (!matched || matched.total_units === 0) {
+                    panelText.innerHTML = `⚠ <strong>Critical Stock Shortage:</strong> 0 units of <b>${bloodType}</b> in local network. RaktSetu AI will auto-trigger <b>Emergency Inter-District Dispatch</b> & donor alerts upon submission.`;
+                } else if (matched.total_units < units) {
+                    panelText.innerHTML = `⚡ <strong>Partial Inventory Alert:</strong> Only <b>${matched.total_units}</b> units available across ${matched.bank_count} banks. RaktSetu AI will recommend a <b>Split Allocation Plan</b> to fulfill remaining ${units - matched.total_units} units.`;
+                } else {
+                    panelText.innerHTML = `✓ <strong>Optimal Fulfillment Match:</strong> <b>${matched.total_units} units</b> of <b>${bloodType}</b> available across ${matched.bank_count} connected blood banks. Estimated Dispatch Time: <b>< 18 Mins</b>.`;
+                }
+            } catch(e) {
+                panelText.innerHTML = `✓ AI Verification active. Ready to evaluate fulfillment path upon request submission.`;
+            }
+        }
+
+        document.getElementById('bloodType').addEventListener('change', updateAiMatchmaker);
+        document.getElementById('unitsNeeded').addEventListener('input', updateAiMatchmaker);
+        document.addEventListener('DOMContentLoaded', updateAiMatchmaker);
+
+        // ── AI Auto-Triage Modal ──────────────────────────────
+        function runAiAutoTriage() {
+            const hb = prompt("Enter Patient Hemoglobin Level (g/dL):", "6.2");
+            if (hb === null) return;
+            const isTrauma = confirm("Is the patient experiencing active hemorrhage / trauma?");
+
+            const hbVal = parseFloat(hb);
+            let urgencyVal = "routine";
+            let unitsVal = 2;
+            let note = "";
+
+            if (isTrauma || hbVal < 6.5) {
+                urgencyVal = "critical";
+                unitsVal = 3;
+                note = `AI Auto-Triage: Critical Anemia / Trauma detected (Hb: ${hbVal} g/dL). Emergency transfusion mandated.`;
+            } else if (hbVal < 8.5) {
+                urgencyVal = "urgent";
+                unitsVal = 2;
+                note = `AI Auto-Triage: Moderate Anemia (Hb: ${hbVal} g/dL). Urgent transfusion recommended.`;
+            } else {
+                urgencyVal = "scheduled";
+                unitsVal = 1;
+                note = `AI Auto-Triage: Routine observation (Hb: ${hbVal} g/dL).`;
+            }
+
+            document.getElementById('urgency').value = urgencyVal;
+            document.getElementById('unitsNeeded').value = unitsVal;
+            document.getElementById('clinicalNote').value = note;
+
+            updateAiMatchmaker();
+            alert(`🤖 AI Auto-Triage Completed!\nUrgency set to: ${urgencyVal.toUpperCase()}\nRecommended Units: ${unitsVal}\nClinical Note Updated.`);
+        }
+
+        // ── Requester Portal Indic Language Switcher ──────────────────────────────
+        const REQ_I18N = {
+            en: { title: "Requester Portal", subtitle: "Create a clinically authorized blood request and monitor its fulfillment." },
+            hi: { title: "अनुरोधकर्ता पोर्टल (RaktSetu)", subtitle: "नैदानिक रूप से अधिकृत रक्त अनुरोध बनाएं और उसकी आपूर्ति की निगरानी करें।" },
+            ta: { title: "கோரிக்கையாளர் போர்ட்டல்", subtitle: "மருத்துவ ரீதியாக அங்கீகரிக்கப்பட்ட ரத்த கோரிக்கையை બનાવી கண்காணிக்கவும்." },
+            te: { title: "రిక్వెస్టర్ పోర్టల్", subtitle: "వైద్యపరంగా ఆమోదించబడిన రక్త విజ్ఞప్తిని సృష్టించండి మరియు దాని పంపిణీని పర్యవేక్షించండి." },
+            bn: { title: "অনুরোধকারী পোর্টাল", subtitle: "একটি চিকিৎসাগতভাবে অনুমোদিত রক্তের অনুরোধ তৈরি করুন এবং সরবরাহ ট্র্যাক করুন।" },
+            mr: { title: "विनंतीकर्ता पोर्टल", subtitle: "वैद्यकीयदृष्ट्या अधिकृत रक्त विनंती तयार करा आणि तिच्या पुरवठ्याचे निरीक्षण करा." }
+        };
+
+        function changeReqLanguage(lang) {
+            const dict = REQ_I18N[lang] || REQ_I18N.en;
+            const h1 = document.querySelector('.portal-header h1');
+            const p = document.querySelector('.portal-header p');
+            if (h1) h1.textContent = dict.title;
+            if (p) p.textContent = dict.subtitle;
+        }
+    </script>
+    <script src="/static/js/i18n.js"></script>
+</body>
+</html>

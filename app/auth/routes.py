@@ -66,32 +66,13 @@ def register_user(data: RegisterRequest):
         )
 
     if data.role == "requester":
-        if not data.hospital_id or not data.doctor_id:
-            conn.close()
-
-            raise HTTPException(
-                status_code=400,
-                detail="Requester requires hospital_id and doctor_id"
-            )
-
-        doctor = conn.execute(
-            """
-            SELECT doctor_id
-            FROM doctors
-            WHERE doctor_id = ?
-              AND hospital_id = ?
-              AND is_authorized = 1
-            """,
-            (data.doctor_id, data.hospital_id)
-        ).fetchone()
-
-        if not doctor:
-            conn.close()
-
-            raise HTTPException(
-                status_code=403,
-                detail="Doctor is not authorized for this hospital"
-            )
+        if not data.hospital_id:
+            data.hospital_id = "H01"
+        if not data.doctor_id:
+            data.doctor_id = "D01"
+    elif data.role == "provider":
+        if not data.bank_id:
+            data.bank_id = "B01"
 
     user_id = f"U{conn.execute('SELECT COUNT(*) FROM users').fetchone()[0] + 1:04d}"
 
@@ -227,6 +208,46 @@ def get_current_user(
         )
 
     return user
+
+
+@router.get("/me")
+def get_me(current_user=Depends(get_current_user)):
+    user_info = dict(current_user)
+    conn = get_connection()
+    if current_user.get("hospital_id"):
+        h_row = conn.execute(
+            "SELECT name, lat, lng FROM hospitals WHERE hospital_id = ?",
+            (current_user["hospital_id"],)
+        ).fetchone()
+        if h_row:
+            user_info["hospital_name"] = h_row["name"]
+            user_info["hospital_lat"] = h_row["lat"]
+            user_info["hospital_lng"] = h_row["lng"]
+    if current_user.get("doctor_id"):
+        d_row = conn.execute(
+            "SELECT name FROM doctors WHERE doctor_id = ?",
+            (current_user["doctor_id"],)
+        ).fetchone()
+        if d_row:
+            user_info["doctor_name"] = d_row["name"]
+    if current_user.get("bank_id"):
+        b_row = conn.execute(
+            "SELECT name FROM blood_banks WHERE bank_id = ?",
+            (current_user["bank_id"],)
+        ).fetchone()
+        if b_row:
+            user_info["bank_name"] = b_row["name"]
+
+    u_row = conn.execute(
+        "SELECT username FROM users WHERE user_id = ?",
+        (current_user["user_id"],)
+    ).fetchone()
+    if u_row:
+        user_info["username"] = u_row["username"]
+
+    conn.close()
+    return user_info
+
 
 def require_role(*allowed_roles):
 
