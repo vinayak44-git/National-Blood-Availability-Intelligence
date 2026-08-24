@@ -258,6 +258,55 @@ def init_db():
     """)
 
     # --------------------------------------------------
+    # DONATIONS LOG TABLE
+    # --------------------------------------------------
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS donations (
+            donation_id TEXT PRIMARY KEY,
+            donor_name TEXT NOT NULL,
+            phone TEXT,
+            email TEXT,
+            age INTEGER,
+            gender TEXT,
+            blood_type TEXT NOT NULL,
+            bank_id TEXT NOT NULL,
+            units INTEGER NOT NULL,
+            status TEXT DEFAULT 'SCHEDULED',
+            appointment_date TEXT,
+            slot_time TEXT,
+            lab_test_details TEXT,
+            certificate_id TEXT,
+            requests_fulfilled TEXT,
+            created_at TEXT NOT NULL,
+            completed_at TEXT,
+            FOREIGN KEY (bank_id) REFERENCES blood_banks(bank_id)
+        )
+    """)
+
+    # Safety column additions for existing SQLite databases
+    extra_cols = [
+        ("email", "TEXT"),
+        ("age", "INTEGER"),
+        ("gender", "TEXT"),
+        ("status", "TEXT DEFAULT 'COMPLETED'"),
+        ("appointment_date", "TEXT"),
+        ("slot_time", "TEXT"),
+        ("lab_test_details", "TEXT"),
+        ("certificate_id", "TEXT"),
+        ("completed_at", "TEXT"),
+        ("hb_level", "REAL"),
+        ("bp_reading", "TEXT"),
+        ("tti_screening", "TEXT"),
+        ("bag_barcode", "TEXT")
+    ]
+    for col_name, col_type in extra_cols:
+        try:
+            cursor.execute(f"ALTER TABLE donations ADD COLUMN {col_name} {col_type}")
+        except Exception:
+            pass
+
+    # --------------------------------------------------
     # INDEXES FOR PERFORMANCE
     # --------------------------------------------------
 

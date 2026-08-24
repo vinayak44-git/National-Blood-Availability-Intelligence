@@ -183,10 +183,42 @@
 
         .queue-item {
             cursor: pointer;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid #ede6e0;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all .2s;
+        }
+
+        .queue-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateX(2px);
+        }
+
+        .queue-item.critical-card {
+            border-left: 5px solid #dc2626;
+            background: #fef2f2;
+        }
+        .queue-item.urgent-card {
+            border-left: 5px solid #ea580c;
+            background: #fff7ed;
+        }
+        .queue-item.routine-card {
+            border-left: 5px solid #2563eb;
+            background: #eff6ff;
+        }
+        .queue-item.scheduled-card {
+            border-left: 5px solid #16a34a;
+            background: #f0fdf4;
         }
 
         .queue-item.selected {
-            outline: 2px solid rgba(168, 26, 41, .18);
+            outline: 2px solid var(--blood-accent);
+            box-shadow: 0 4px 16px rgba(192, 24, 43, .18);
         }
 
         .pipeline-step.passed {
@@ -202,6 +234,33 @@
         .pipeline-step.pending {
             border-color: #f1d58a;
             background: #fffaf0;
+        }
+
+        .pipeline-step.processing {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+            animation: pulseProcessing 1.2s infinite ease-in-out;
+        }
+
+        @keyframes pulseProcessing {
+            0% { border-color: #60a5fa; box-shadow: 0 0 4px rgba(96, 165, 250, 0.2); }
+            50% { border-color: #2563eb; box-shadow: 0 0 14px rgba(37, 99, 235, 0.4); }
+            100% { border-color: #60a5fa; box-shadow: 0 0 4px rgba(96, 165, 250, 0.2); }
+        }
+
+        .pipeline-step.processing .step-details span {
+            color: #1d4ed8;
+            font-weight: 700;
+        }
+
+        .spin-icon {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
         .pipeline-step .step-details span {
@@ -365,13 +424,13 @@
 
     <aside class="sidebar" id="sidebar">
 
-        <div class="brand">
+        <a href="/" class="brand" style="text-decoration:none;color:inherit;cursor:pointer;">
             <div class="brand-icon">🩸</div>
             <div class="brand-text">
                 <h2>RaktSetu</h2>
                 <span>Emergency Network</span>
             </div>
-        </div>
+        </a>
 
         <div class="sidebar-label">CONTROL ROOM</div>
 
@@ -381,9 +440,9 @@
                 <span>Dashboard</span>
             </a>
 
-            <a href="#queueListContainer" class="nav-item" id="nav-queue-btn">
+            <a href="/priority-queue" class="nav-item" id="nav-queue-btn">
                 <span class="nav-icon">⏳</span>
-                <span>Priority Queue</span>
+                <span>Priority Queue Matrix</span>
                 <span class="nav-count" id="navQueueCount">0</span>
             </a>
         </nav>
@@ -1450,15 +1509,12 @@
         }
 
         function urgencyClass(urgency) {
-            if (urgency === "critical") {
-                return "red";
-            }
-
-            if (urgency === "urgent") {
-                return "yellow";
-            }
-
-            return "green";
+            const u = String(urgency || "").toLowerCase();
+            if (u === "critical") return "critical";
+            if (u === "urgent") return "urgent";
+            if (u === "routine") return "routine";
+            if (u === "scheduled") return "scheduled";
+            return "critical";
         }
 
         function statusClass(status) {
@@ -1541,6 +1597,15 @@
                 return true;
             });
 
+            // Priority Queue Ranking: Critical (1) > Urgent (2) > Routine (3) > Scheduled (4)
+            const urgencyRank = { critical: 1, urgent: 2, routine: 3, scheduled: 4 };
+            displayList.sort((a, b) => {
+                const rankA = urgencyRank[String(a.urgency || '').toLowerCase()] || 5;
+                const rankB = urgencyRank[String(b.urgency || '').toLowerCase()] || 5;
+                if (rankA !== rankB) return rankA - rankB;
+                return String(a.created_at || a.timestamp || '').localeCompare(String(b.created_at || b.timestamp || ''));
+            });
+
             queueListContainer.innerHTML = "";
 
             if (displayList.length === 0) {
@@ -1557,9 +1622,10 @@
 
             visibleItems.forEach(request => {
                 const item = document.createElement("div");
+                const u = String(request.urgency || "critical").toLowerCase();
 
                 item.className =
-                    "queue-item" +
+                    `queue-item ${u}-card` +
                     (
                         activeRequest &&
                             activeRequest.request_id === request.request_id
@@ -1568,25 +1634,24 @@
                     );
 
                 item.innerHTML = `
-                    <div>
-                        <strong>
-                            ${escapeHtml(request.request_id || "Pending ID")}
-                        </strong>
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                            <strong style="font-size:13.5px;color:var(--text-dark);">
+                                ${escapeHtml(request.request_id || "Pending ID")}
+                            </strong>
+                            <span style="font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${escapeHtml(request.hospital_name || request.hospital_id || "Hospital")}
+                            </span>
+                        </div>
 
-                        <span>
-                            ${escapeHtml(request.hospital_name || request.hospital_id || "Hospital")}
-                        </span>
-
-                        <small>
-                            Requires
-                            <b>${request.units_needed ?? 0}</b>
-                            units of
-                            <b>${escapeHtml(request.blood_type || "N/A")}</b>
-                        </small>
+                        <div style="font-size:11px;color:var(--text-muted);">
+                            Requires <b>${request.units_needed ?? 0}</b> units of
+                            <b style="color:var(--blood-accent);">${escapeHtml(request.blood_type || "N/A")}</b>
+                        </div>
                     </div>
 
-                    <span class="tag ${urgencyClass(request.urgency)}">
-                        ${String(request.urgency || "UNKNOWN").toUpperCase()}
+                    <span class="tag ${urgencyClass(u)}" style="padding:4px 9px;font-size:10px;font-weight:800;border-radius:999px;display:inline-flex;align-items:center;gap:5px;flex-shrink:0;">
+                        <span class="urg-dot ${u}"></span>${u.toUpperCase()}
                     </span>
                 `;
 
@@ -1635,12 +1700,12 @@
             statPendingCount.textContent = pending;
         }
 
-        function selectRequest(request) {
+        function selectRequest(request, isNewSubmission = false) {
             activeRequest = request;
 
             renderQueue();
             renderActiveRequest(request);
-            renderPipeline(request);
+            renderPipeline(request, isNewSubmission);
             renderAuditTrail(request);
             renderAllocation(request);
             updateMapForRequest(request);
@@ -1791,6 +1856,8 @@
             `;
         }
 
+        let activePipelineTimer = null;
+
         function setPipelineStep(
             stepId,
             statusId,
@@ -1803,20 +1870,30 @@
             const status =
                 document.getElementById(statusId);
 
+            if (!step || !status) return;
+
             step.classList.remove(
                 "passed",
                 "failed",
-                "pending"
+                "pending",
+                "processing"
             );
 
             if (state) {
                 step.classList.add(state);
             }
 
-            status.textContent = text;
+            status.innerHTML = text;
         }
 
-        function renderPipeline(request) {
+        const animatedRequests = new Set();
+
+        function renderPipeline(request, isNewSubmission = false) {
+            if (activePipelineTimer) {
+                clearTimeout(activePipelineTimer);
+                activePipelineTimer = null;
+            }
+
             if (!request) {
                 setPipelineStep(
                     "step-hospital",
@@ -1859,100 +1936,103 @@
                     .toLowerCase()
                     .includes("pending");
 
-            if (rejected) {
-                setPipelineStep(
-                    "step-hospital",
-                    "val-hospital-status",
-                    "failed",
-                    "Failed"
-                );
+            const reqId = request.request_id || "TEMP";
+            const shouldAnimate = isNewSubmission && !animatedRequests.has(reqId);
 
-                setPipelineStep(
-                    "step-doctor",
-                    "val-doctor-status",
-                    "failed",
-                    "Verification failed"
-                );
+            if (shouldAnimate && reqId !== "TEMP") {
+                animatedRequests.add(reqId);
+            }
 
-                setPipelineStep(
-                    "step-prescription",
-                    "val-prescription-status",
-                    "failed",
-                    "Verification failed"
-                );
-
-                setPipelineStep(
-                    "step-priority",
-                    "val-priority-status",
-                    "failed",
-                    "Request rejected"
-                );
-
+            // If not a new submission or already animated, render final static state immediately
+            if (!shouldAnimate) {
+                if (rejected) {
+                    setPipelineStep(
+                        "step-hospital",
+                        "val-hospital-status",
+                        request.reason && request.reason.includes("hospital") ? "failed" : "passed",
+                        request.reason && request.reason.includes("hospital") ? `✗ Invalid Hospital (${request.hospital_id || 'H99'})` : `✓ Validated (${request.hospital_id || 'H02'})`
+                    );
+                    setPipelineStep(
+                        "step-doctor",
+                        "val-doctor-status",
+                        request.reason && (request.reason.includes("doctor") || request.reason.includes("mismatch")) ? "failed" : (request.reason && request.reason.includes("hospital") ? "failed" : "passed"),
+                        request.reason && (request.reason.includes("doctor") || request.reason.includes("mismatch")) ? `✗ Doctor Auth Failed (${request.doctor_id || 'D11'})` : (request.reason && request.reason.includes("hospital") ? "Aborted" : `✓ Authorized (${request.doctor_id || 'D03'})`)
+                    );
+                    setPipelineStep("step-prescription", "val-prescription-status", "failed", "✗ Validation Failed");
+                    setPipelineStep("step-priority", "val-priority-status", "failed", "Rejected");
+                } else if (pending) {
+                    setPipelineStep("step-hospital", "val-hospital-status", "passed", `✓ Validated (${request.hospital_id || 'H02'})`);
+                    setPipelineStep("step-doctor", "val-doctor-status", "passed", `✓ Authorized (${request.doctor_id || 'D03'})`);
+                    setPipelineStep("step-prescription", "val-prescription-status", "pending", "⚠ Pending Clinical Docs");
+                    setPipelineStep("step-priority", "val-priority-status", "pending", "Awaiting Verification");
+                } else {
+                    setPipelineStep("step-hospital", "val-hospital-status", "passed", `✓ Validated (${request.hospital_id || 'H02'})`);
+                    setPipelineStep("step-doctor", "val-doctor-status", "passed", `✓ Authorized (${request.doctor_id || 'D03'})`);
+                    setPipelineStep("step-prescription", "val-prescription-status", "passed", `✓ Prescription Validated`);
+                    setPipelineStep("step-priority", "val-priority-status", "passed", `✓ Classified: ${String(request.urgency || "critical").toUpperCase()}`);
+                }
                 return;
             }
 
-            if (pending) {
-                setPipelineStep(
-                    "step-hospital",
-                    "val-hospital-status",
-                    "passed",
-                    "Validated"
-                );
+            // Slow, realistic verification animation: 1200ms per step (~5s total)
+            const delayStep = 1200;
 
-                setPipelineStep(
-                    "step-doctor",
-                    "val-doctor-status",
-                    "passed",
-                    "Authorized"
-                );
+            // Start step 1: Hospital Validation Processing
+            setPipelineStep("step-hospital", "val-hospital-status", "processing", '<span class="spin-icon">⚙</span> Validating Hospital Registry...');
+            setPipelineStep("step-doctor", "val-doctor-status", "pending", "Awaiting Step 1...");
+            setPipelineStep("step-prescription", "val-prescription-status", "pending", "Awaiting Step 2...");
+            setPipelineStep("step-priority", "val-priority-status", "pending", "Awaiting Step 3...");
 
-                setPipelineStep(
-                    "step-prescription",
-                    "val-prescription-status",
-                    "pending",
-                    "Pending"
-                );
+            let stepCount = 0;
 
-                setPipelineStep(
-                    "step-priority",
-                    "val-priority-status",
-                    "pending",
-                    "Awaiting verification"
-                );
+            function runStep() {
+                stepCount++;
 
-                return;
+                if (stepCount === 1) {
+                    if (rejected && request.reason && request.reason.includes("hospital")) {
+                        setPipelineStep("step-hospital", "val-hospital-status", "failed", `✗ Invalid Hospital (${request.hospital_id || 'H99'})`);
+                        setPipelineStep("step-doctor", "val-doctor-status", "failed", "Aborted");
+                        setPipelineStep("step-prescription", "val-prescription-status", "failed", "Aborted");
+                        setPipelineStep("step-priority", "val-priority-status", "failed", "Rejected");
+                        return;
+                    }
+                    setPipelineStep("step-hospital", "val-hospital-status", "passed", `✓ Validated (${request.hospital_id || 'H02'})`);
+                    setPipelineStep("step-doctor", "val-doctor-status", "processing", '<span class="spin-icon">⚙</span> Verifying Doctor License & Auth...');
+                    activePipelineTimer = setTimeout(runStep, delayStep);
+                }
+                else if (stepCount === 2) {
+                    if (rejected && request.reason && (request.reason.includes("doctor") || request.reason.includes("mismatch"))) {
+                        setPipelineStep("step-doctor", "val-doctor-status", "failed", `✗ Doctor Auth Failed (${request.doctor_id || 'D11'})`);
+                        setPipelineStep("step-prescription", "val-prescription-status", "failed", "Aborted");
+                        setPipelineStep("step-priority", "val-priority-status", "failed", "Rejected");
+                        return;
+                    }
+                    setPipelineStep("step-doctor", "val-doctor-status", "passed", `✓ Authorized (${request.doctor_id || 'D03'})`);
+                    setPipelineStep("step-prescription", "val-prescription-status", "processing", '<span class="spin-icon">⚙</span> Checking Prescription & Payload...');
+                    activePipelineTimer = setTimeout(runStep, delayStep);
+                }
+                else if (stepCount === 3) {
+                    if (pending) {
+                        setPipelineStep("step-prescription", "val-prescription-status", "pending", "⚠ Pending Clinical Docs");
+                        setPipelineStep("step-priority", "val-priority-status", "pending", "Awaiting Verification");
+                        return;
+                    }
+                    if (rejected) {
+                        setPipelineStep("step-prescription", "val-prescription-status", "failed", "✗ Validation Failed");
+                        setPipelineStep("step-priority", "val-priority-status", "failed", "Rejected");
+                        return;
+                    }
+                    setPipelineStep("step-prescription", "val-prescription-status", "passed", `✓ Prescription Validated`);
+                    setPipelineStep("step-priority", "val-priority-status", "processing", '<span class="spin-icon">⚙</span> Computing Heap Rank & Priority...');
+                    activePipelineTimer = setTimeout(runStep, delayStep);
+                }
+                else if (stepCount === 4) {
+                    const u = String(request.urgency || "critical").toUpperCase();
+                    setPipelineStep("step-priority", "val-priority-status", "passed", `✓ Classified: ${u}`);
+                }
             }
 
-            setPipelineStep(
-                "step-hospital",
-                "val-hospital-status",
-                "passed",
-                "Validated"
-            );
-
-            setPipelineStep(
-                "step-doctor",
-                "val-doctor-status",
-                "passed",
-                "Authorized"
-            );
-
-            setPipelineStep(
-                "step-prescription",
-                "val-prescription-status",
-                "passed",
-                request.prescription_id
-                    ? "Valid"
-                    : "Accepted"
-            );
-
-            setPipelineStep(
-                "step-priority",
-                "val-priority-status",
-                "passed",
-                String(request.urgency || "critical")
-                    .toUpperCase()
-            );
+            activePipelineTimer = setTimeout(runStep, delayStep);
         }
 
         function renderAuditTrail(request) {
@@ -2026,21 +2106,18 @@
                         Fulfillment options will appear once a request is verified.
                     </div>
                 `;
-
                 return;
             }
 
             if (
                 request.status === "rejected" ||
-                request.status ===
-                "pending_clinical_verification"
+                request.status === "pending_clinical_verification"
             ) {
                 allocationContainer.innerHTML = `
                     <div class="empty-state">
                         Verification failed or is pending. Cannot recommend allocations.
                     </div>
                 `;
-
                 return;
             }
 
@@ -2049,16 +2126,76 @@
                 return;
             }
 
-            allocationContainer.innerHTML = `
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 20px 0;">
-                    <div class="empty-state" style="border:none; margin-bottom:15px; background:none;">
-                        Request verified. Ready to recommend matching allocations.
+            previewAllocation(request);
+        }
+
+        async function previewAllocation(request) {
+            try {
+                allocationContainer.innerHTML = `
+                    <div class="empty-state">
+                        <span class="spin-icon">⚙</span> Calculating recommended split-fulfillment...
                     </div>
-                    <button onclick="fulfillActiveRequest('${request.request_id}')" class="login-button" style="background:#dc2626; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-                        ⚡ Process & Fulfill Request
-                    </button>
-                </div>
-            `;
+                `;
+                const res = await fetch(`/fullfillment/${request.request_id}/preview`, { credentials: "same-origin" });
+                if (!res.ok) throw new Error("Could not calculate preview");
+                const data = await res.json();
+                
+                if (data.allocations && data.allocations.length > 0) {
+                    let html = `
+                        <div style="display:flex; flex-direction:column; gap:10px; padding:4px 0;">
+                            <div style="font-size:11.5px; font-weight:700; color:#15803d; background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                                <span>✓ Recommended Match (${data.units_allocated}/${data.units_requested} Units)</span>
+                                <span class="tag green" style="font-size:9px; padding:2px 6px">LIVE OPTIMIZED</span>
+                            </div>
+                    `;
+                    data.allocations.forEach(alloc => {
+                        html += `
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border:1px solid #e1d9d2; border-radius:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                <div>
+                                    <strong style="display:block; font-size:13px; color:#302b2a;">${escapeHtml(alloc.bank_name || alloc.bank_id)}</strong>
+                                    <span style="font-size:11px; color:#77706c;">Distance: ${alloc.distance_km} km | Expiry: ${alloc.expiry_date}</span>
+                                </div>
+                                <div style="text-align:right;">
+                                    <span class="tag green" style="font-weight:700; font-size:11px; padding:3px 6px; background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d;">${alloc.units} Units</span>
+                                    <span style="display:block; font-size:9px; color:#9c9592; margin-top:3px;">Stock: ${alloc.remaining_stock} left</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `
+                        <button onclick="fulfillActiveRequest('${request.request_id}')" class="submit-btn" style="margin-top:4px; background:#dc2626; color:white; border:none; padding:10px 16px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; width:100%; display:flex; align-items:center; justify-content:center; gap:6px;">
+                            ⚡ Confirm & Fulfill Request
+                        </button>
+                    </div>`;
+                    allocationContainer.innerHTML = html;
+
+                    if (request.hospital_lat && request.hospital_lng) {
+                        drawFulfillmentLines({
+                            lat: request.hospital_lat,
+                            lng: request.hospital_lng
+                        }, data.allocations);
+                    }
+                } else {
+                    allocationContainer.innerHTML = `
+                        <div class="empty-state" style="color:#b91c1c; background:#fef2f2; border-color:#fecaca;">
+                            ⚠ Insufficient Stock Across Network for ${request.blood_type}.
+                            <button onclick="triggerRareDonorBroadcast()" style="margin-top:8px; background:#dc2626; color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; width:100%;">
+                                🚨 Trigger Voluntary Donor Callout
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error("Preview allocation error:", err);
+                allocationContainer.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding: 15px 0;">
+                        <button onclick="fulfillActiveRequest('${request.request_id}')" class="login-button" style="background:#dc2626; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer;">
+                            ⚡ Process & Fulfill Request
+                        </button>
+                    </div>
+                `;
+            }
         }
 
         async function fulfillActiveRequest(requestId) {
@@ -2332,7 +2469,8 @@
                     );
 
                     selectRequest(
-                        pendingRequest
+                        pendingRequest,
+                        true
                     );
 
                     showSimulatorMessage(
@@ -2379,7 +2517,8 @@
                 );
 
                 selectRequest(
-                    verifiedRequest
+                    verifiedRequest,
+                    true
                 );
 
                 renderAllocation(
@@ -2478,13 +2617,8 @@
             .getElementById("nav-queue-btn")
             .addEventListener(
                 "click",
-                function () {
-                    setTimeout(() => {
-                        queueListContainer.scrollIntoView({
-                            behavior: "smooth",
-                            block: "center"
-                        });
-                    }, 50);
+                function (e) {
+                    window.location.href = "/priority-queue";
                 }
             );
 

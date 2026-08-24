@@ -41,7 +41,7 @@
 <div class="ambient"></div>
 <div class="portal-shell">
 <aside class="portal-side">
-  <div class="brand"><div class="brand-icon">🩸</div><div><h2>RaktSetu</h2><span>Provider Portal</span></div></div>
+  <a href="/" class="brand" style="text-decoration:none;color:inherit;cursor:pointer;"><div class="brand-icon">🩸</div><div><h2>RaktSetu</h2><span>Provider Portal</span></div></a>
   <div class="side-label">BLOOD BANK</div>
   <div class="side-links">
     <a class="active" href="#overview">📊 Overview</a>
@@ -87,8 +87,18 @@
 
   <section id="inventory" class="grid two">
     <div class="card">
-      <h2>🧪 Live Inventory</h2>
-      <p style="margin-bottom:14px;font-size:12px;color:var(--text-muted)">Edit unit counts and click Save to update.</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px">
+        <h2 style="margin:0">🧪 Live Inventory</h2>
+        <select id="bankSelector" onchange="loadInv()" style="padding:5px 9px;border-radius:8px;border:1px solid var(--cream-border);font-size:11px;font-weight:700;color:var(--text-dark);background:#fff;">
+          <option value="ALL">🌐 All Blood Banks (National Stock)</option>
+          <option value="B01">🏥 B01 · RaktSetu Central Blood Bank</option>
+          <option value="B02">🏥 B02 · LifeBlood Blood Bank</option>
+          <option value="B03">🏥 B03 · National Blood Centre</option>
+          <option value="B04">🏥 B04 · RedCare Blood Bank</option>
+          <option value="B05">🏥 B05 · Hope Blood Services</option>
+        </select>
+      </div>
+      <p style="margin-bottom:14px;font-size:12px;color:var(--text-muted)">Select a bank above or view network-wide live stock.</p>
       <div id="invList"><div class="empty-l">Loading…</div></div>
     </div>
     <div class="card" id="dispatch">
@@ -108,21 +118,59 @@ async function init() {
     const r = await fetch('/auth/me', {credentials:'same-origin'});
     if (!r.ok) { window.location.href='/login'; return; }
     currentUser = await r.json();
-    document.getElementById('userChip').textContent = `${currentUser.bank_id} · ${currentUser.bank_name||'Bank'}`;
-    document.getElementById('sideFooter').textContent = `Provider: ${currentUser.bank_id} · ${currentUser.bank_name||''}`;
+    document.getElementById('userChip').textContent = `${currentUser.bank_id || 'Network'} · ${currentUser.bank_name||'Provider Portal'}`;
+    document.getElementById('sideFooter').textContent = `Provider: ${currentUser.bank_id || 'All'} · ${currentUser.bank_name||''}`;
+    
+    // Set default selected bank to current user bank
+    const sel = document.getElementById('bankSelector');
+    if (sel && currentUser.bank_id) { sel.value = currentUser.bank_id; }
+    
     await Promise.all([loadInv(), loadReq(), loadExpiry()]);
   } catch(e) { console.error(e); }
 }
 
 async function loadInv() {
-  const r = await fetch('/provider/inventory', {credentials:'same-origin'});
+  const selectedBank = document.getElementById('bankSelector')?.value || currentUser?.bank_id || 'ALL';
+  const url = selectedBank === 'ALL' ? '/provider/inventory?bank_id=ALL' : `/provider/inventory?bank_id=${selectedBank}`;
+  const r = await fetch(url, {credentials:'same-origin'});
   const d = await r.json();
+  
+  const el = document.getElementById('invList');
+  if (selectedBank === 'ALL') {
+    invData = d.inventory || [];
+    const total = invData.reduce((a,i)=>a+i.units,0);
+    document.getElementById('kpiTotal').textContent = total;
+    
+    const grouped = {};
+    invData.forEach(item => {
+      if (!grouped[item.bank_id]) grouped[item.bank_id] = { name: item.bank_name || item.bank_id, items: [] };
+      grouped[item.bank_id].items.push(item);
+    });
+    
+    el.innerHTML = Object.keys(grouped).length === 0
+      ? '<div class="empty-l">No inventory records available.</div>'
+      : Object.keys(grouped).map(bId => {
+          const b = grouped[bId];
+          return `<div style="background:#fff;border:1px solid var(--cream-border);border-radius:10px;padding:12px;margin-bottom:14px;">
+            <div style="font-size:12px;font-weight:700;color:var(--blood-accent);margin-bottom:8px">🏥 [${bId}] ${b.name}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;">
+              ${b.items.map(item => `
+                <div style="background:#faf7f5;border:1px solid #ede6e0;border-radius:8px;padding:6px 8px;display:flex;align-items:center;justify-content:space-between">
+                  <span class="bchip" style="width:28px;height:28px;font-size:10px">${item.blood_type}</span>
+                  <span style="font-weight:800;font-size:12px;color:#302b2a">${item.units} <small style="font-weight:400;font-size:10px;color:var(--text-muted)">units</small></span>
+                </div>
+              `).join('')}
+            </div>
+          </div>`;
+        }).join('');
+    return;
+  }
+
   invData = d.inventory || [];
   const total = invData.reduce((a,i)=>a+i.units,0);
   const exp3  = invData.filter(i=>daysUntil(i.expiry_date)<=3).length;
   document.getElementById('kpiTotal').textContent = total;
   document.getElementById('kpiExp').textContent   = exp3;
-  const el = document.getElementById('invList');
   const mx = Math.max(...invData.map(i=>i.units), 1);
   el.innerHTML = invData.length===0
     ? '<div class="empty-l">No inventory records.</div>'
@@ -221,8 +269,50 @@ async function acceptReq(id, btn) {
   btn.disabled=true; btn.textContent='…';
   const r = await fetch(`/provider/requests/${id}/accept`, {method:'POST',credentials:'same-origin'});
   const d = await r.json();
-  if (r.ok) { showMsg('reqMsg',`✅ ${id} accepted. ${d.units_allocated} units reserved.`,'s'); await loadReq(); await loadInv(); }
-  else { showMsg('reqMsg',d.detail||'Failed.','e'); btn.disabled=false; btn.textContent='✓ Accept'; }
+  if (r.ok) { 
+    showMsg('reqMsg',`✅ ${id} accepted. ${d.units_allocated} units reserved.`,'s'); 
+    await loadReq(); 
+    await loadInv(); 
+  } else { 
+    btn.disabled=false; btn.textContent='✓ Accept'; 
+    const isInventoryError = (d.detail || '').includes('Insufficient local bank inventory');
+    if (isInventoryError) {
+      showMsgHTML('reqMsg', `
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div>⚠️ <strong>Local Stock Insufficient:</strong> ${d.detail}</div>
+          <div style="display:flex;gap:10px;align-items:center;margin-top:4px;">
+            <button onclick="networkFulfillReq('${id}')" style="background:var(--blood-accent);color:white;border:none;border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;">🌐 Route to Multi-Bank Network Allocation</button>
+            <a href="/donor?demo=true" target="_blank" style="color:var(--blood-accent);font-weight:700;font-size:11px;text-decoration:underline;">🩸 Open Voluntary Donor Portal</a>
+          </div>
+        </div>
+      `, 'e');
+    } else {
+      showMsg('reqMsg', d.detail || 'Failed.', 'e');
+    }
+  }
+}
+
+async function networkFulfillReq(id) {
+  const msgEl = document.getElementById('reqMsg');
+  if (msgEl) { msgEl.className = 'msgbox s'; msgEl.innerHTML = `⚙ Processing RaktSetu Multi-Bank Network Split Allocation for ${id}...`; }
+  try {
+    const r = await fetch(`/provider/requests/${id}/network-fulfill`, {method:'POST', credentials:'same-origin'});
+    const d = await r.json();
+    if (r.ok) {
+      if (d.status === 'fulfilled' || d.status === 'partially_fulfilled') {
+        const banksUsed = (d.allocations || []).map(a => `${a.bank_id} (${a.units}u)`).join(', ');
+        showMsgHTML('reqMsg', `✅ <strong>Request ${id} Resolved via Network Fulfillment!</strong> Allocated ${d.units_allocated}/${d.units_requested} units across blood banks: <strong>${banksUsed}</strong>`, 's');
+      } else {
+        showMsgHTML('reqMsg', `⚠️ <strong>Zero Network Stock Available:</strong> All connected blood banks currently lack stock for ${d.blood_type}. Please <a href="/donor?demo=true" target="_blank" style="color:var(--blood-accent);font-weight:700;text-decoration:underline;">Register Voluntary Donors</a>.`, 'e');
+      }
+      await loadReq();
+      await loadInv();
+    } else {
+      showMsg('reqMsg', d.detail || 'Network fulfillment failed.', 'e');
+    }
+  } catch (err) {
+    showMsg('reqMsg', 'Network error during multi-bank allocation.', 'e');
+  }
 }
 
 async function dispatchReq(id, btn) {
@@ -267,6 +357,12 @@ function showMsg(id, txt, cls) {
   if (!el) return;
   el.textContent=txt; el.className=`msgbox ${cls}`;
   setTimeout(()=>{el.className='msgbox';},5500);
+}
+function showMsgHTML(id, html, cls) {
+  const el=document.getElementById(id);
+  if (!el) return;
+  el.innerHTML=html; el.className=`msgbox ${cls}`;
+  setTimeout(()=>{el.className='msgbox';},10000);
 }
 
 document.addEventListener('DOMContentLoaded', init);

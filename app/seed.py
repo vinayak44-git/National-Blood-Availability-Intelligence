@@ -104,6 +104,19 @@ USERS = [
     ("U0006", "patient1", "Patient@123", "patient", None, None, None),
 ]
 
+SAMPLE_REQUESTS = [
+    ("R1001", "H01", "D01", "O-", 3, "critical", 28.6139, 77.2090, 1, "queued", "RX1001", "Trauma patient in ER with severe blood loss.", "2026-08-25 01:00:00"),
+    ("R1002", "H02", "D03", "A+", 4, "critical", 28.6280, 77.2180, 1, "queued", "RX1002", "Emergency cardiac surgery required.", "2026-08-25 01:05:00"),
+    ("R1003", "H03", "D05", "B-", 2, "urgent", 28.5355, 77.3910, 1, "queued", "RX1003", "Post-partum hemorrhage management.", "2026-08-25 01:10:00"),
+    ("R1004", "H04", "D06", "O+", 5, "urgent", 28.5672, 77.2100, 1, "queued", "RX1004", "Major orthopedic surgery transfusion.", "2026-08-25 01:15:00"),
+    ("R1005", "H05", "D07", "AB-", 1, "critical", 28.4595, 77.0266, 1, "queued", "RX1005", "Rare blood group trauma case.", "2026-08-25 01:20:00"),
+    ("R1006", "H06", "D08", "A-", 3, "routine", 28.5672, 77.2430, 1, "queued", "RX1006", "Routine oncology maintenance transfusion.", "2026-08-25 01:25:00"),
+    ("R1007", "H07", "D09", "B+", 4, "routine", 28.7041, 77.1025, 1, "queued", "RX1007", "Thalassemia routine replenishment.", "2026-08-25 01:30:00"),
+    ("R1008", "H08", "D10", "AB+", 2, "scheduled", 28.6692, 77.4538, 1, "queued", "RX1008", "Elective vascular procedure scheduled.", "2026-08-25 01:35:00"),
+    ("R1009", "H01", "D02", "O-", 2, "scheduled", 28.6139, 77.2090, 1, "queued", "RX1009", "Scheduled surgical buffer stock.", "2026-08-25 01:40:00"),
+]
+
+
 def seed_database():
     conn = get_connection()
     cursor = conn.cursor()
@@ -126,11 +139,13 @@ def seed_database():
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, BLOOD_BANKS)
 
-    cursor.executemany("""
-        INSERT OR IGNORE INTO blood_inventory
-        (bank_id, blood_type, units, expiry_date, updated_at)
-        VALUES (?, ?, ?, ?, datetime('now'))
-    """, BLOOD_INVENTORY)
+    existing_inv = cursor.execute("SELECT COUNT(*) FROM blood_inventory").fetchone()[0]
+    if existing_inv == 0:
+        cursor.executemany("""
+            INSERT INTO blood_inventory
+            (bank_id, blood_type, units, expiry_date, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'))
+        """, BLOOD_INVENTORY)
 
     for user_id, username, password, role, hospital_id, doctor_id, bank_id in USERS:
         cursor.execute(
@@ -159,8 +174,25 @@ def seed_database():
         )
     )
 
+    # Clean duplicate/excess requests
+    cursor.execute("DELETE FROM blood_requests WHERE rowid NOT IN (SELECT MIN(rowid) FROM blood_requests GROUP BY blood_type, units_needed, urgency, hospital_id, doctor_id)")
+
+    existing_reqs = cursor.execute("SELECT COUNT(*) FROM blood_requests WHERE status IN ('queued', 'verified')").fetchone()[0]
+    if existing_reqs == 0:
+        cursor.executemany("""
+            INSERT OR IGNORE INTO blood_requests
+            (request_id, hospital_id, doctor_id, blood_type, units_needed, urgency, hospital_lat, hospital_lng, verified, status, prescription_id, clinical_note, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, SAMPLE_REQUESTS)
+
     conn.commit()
     conn.close()
+
+    try:
+        from app.priority_queue import load_queue_from_db
+        load_queue_from_db()
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

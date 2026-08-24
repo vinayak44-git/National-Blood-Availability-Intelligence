@@ -262,3 +262,90 @@ def fulfill_request(request_id):
         conn.rollback()
         conn.close()
         raise
+
+
+def preview_fulfillment(request_id: str):
+    conn = get_connection()
+    request = conn.execute(
+        """
+        SELECT request_id, hospital_id, blood_type, units_needed, urgency, hospital_lat, hospital_lng, verified, status
+        FROM blood_requests
+        WHERE request_id = ?
+        """,
+        (request_id,)
+    ).fetchone()
+
+    if not request:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Blood request not found")
+
+    compatible_types = get_compatible_blood_types(request["blood_type"])
+    placeholders = ",".join("?" for _ in compatible_types)
+
+    inventory_rows = conn.execute(
+        f"""
+        SELECT bi.inventory_id, bi.bank_id, bi.blood_type, bi.units, bi.expiry_date, bb.name AS bank_name, bb.lat, bb.lng
+        FROM blood_inventory bi
+        JOIN blood_banks bb ON bi.bank_id = bb.bank_id
+        WHERE bi.blood_type IN ({placeholders})
+          AND bi.units > 0
+          AND bi.expiry_date >= date('now')
+          AND bb.is_active = 1
+        ORDER BY bi.expiry_date ASC
+        """,
+        compatible_types
+    ).fetchall()
+    conn.close()
+
+    inventory = []
+    for row in inventory_rows:
+        distance = calculate_distance(
+            request["hospital_lat"],
+            request["hospital_lng"],
+            row["lat"],
+            row["lng"]
+        )
+        inventory.append({
+            "inventory_id": row["inventory_id"],
+            "bank_id": row["bank_id"],
+            "bank_name": row["bank_name"],
+            "blood_type": row["blood_type"],
+            "units": row["units"],
+            "expiry_date": row["expiry_date"],
+            "lat": row["lat"],
+            "lng": row["lng"],
+            "distance_km": distance
+        })
+
+    inventory.sort(key=lambda item: (item["distance_km"], item["expiry_date"]))
+
+    remaining = request["units_needed"]
+    allocations = []
+    for item in inventory:
+        if remaining <= 0:
+            break
+        allocated = min(remaining, item["units"])
+        new_units = item["units"] - allocated
+        allocations.append({
+            "inventory_id": item["inventory_id"],
+            "bank_id": item["bank_id"],
+            "bank_name": item["bank_name"],
+            "blood_type": item["blood_type"],
+            "units": allocated,
+            "remaining_stock": new_units,
+            "distance_km": round(item["distance_km"], 2),
+            "lat": item["lat"],
+            "lng": item["lng"],
+            "expiry_date": item["expiry_date"]
+        })
+        remaining -= allocated
+
+    total_allocated = sum(a["units"] for a in allocations)
+    return {
+        "request_id": request_id,
+        "blood_type": request["blood_type"],
+        "units_requested": request["units_needed"],
+        "units_allocated": total_allocated,
+        "status": "fulfilled" if remaining == 0 else ("partially_fulfilled" if total_allocated > 0 else "queued_insufficient_stock"),
+        "allocations": allocations
+    }

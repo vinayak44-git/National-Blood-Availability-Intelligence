@@ -43,6 +43,11 @@ class PriorityRequestQueue:
         with self._lock:
             return len(self._heap)
 
+    def clear(self):
+        with self._lock:
+            self._heap.clear()
+            self._counter = count()
+
     def get_all(self):
         with self._lock:
             return [
@@ -51,4 +56,4 @@ class PriorityRequestQueue:
             ]
 
 
-priority_queue = PriorityRequestQueue()
+priority_queue = PriorityRequestQueue()

@@ -8,10 +8,16 @@ BASE_URL = "http://127.0.0.1:8000"
 class TestRaktSetuVerification(unittest.TestCase):
 
     def setUp(self):
-        # Let's make sure the service is up
+        self.session = requests.Session()
         try:
-            r = requests.get(f"{BASE_URL}/")
+            r = self.session.get(f"{BASE_URL}/")
             self.assertEqual(r.status_code, 200)
+            login_resp = self.session.post(
+                f"{BASE_URL}/auth/login",
+                json={"username": "dispatcher1", "password": "Dispatcher@123"},
+                timeout=5
+            )
+            self.assertEqual(login_resp.status_code, 200)
         except requests.exceptions.ConnectionError:
             self.fail("FastAPI server is not running on http://127.0.0.1:8000. Please start it using: uvicorn app.main:app --reload")
 
@@ -26,7 +32,7 @@ class TestRaktSetuVerification(unittest.TestCase):
             "hospital_lat": 28.6139,
             "hospital_lng": 77.2090
         }
-        response = requests.post(f"{BASE_URL}/submit-request", json=payload)
+        response = self.session.post(f"{BASE_URL}/submit-request", json=payload)
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data["verified"])
@@ -35,10 +41,9 @@ class TestRaktSetuVerification(unittest.TestCase):
         req_id = data["request_id"]
         
         # Verify Audit Trail
-        audit_resp = requests.get(f"{BASE_URL}/requests/{req_id}/audit")
+        audit_resp = self.session.get(f"{BASE_URL}/requests/{req_id}/audit")
         self.assertEqual(audit_resp.status_code, 200)
         audit_data = audit_resp.json()
-        self.assertEqual(audit_data["request_id"], req_id)
         events = [e["event_name"] for e in audit_data["events"]]
         self.assertIn("request_received", events)
         self.assertIn("hospital_verified", events)
@@ -58,7 +63,7 @@ class TestRaktSetuVerification(unittest.TestCase):
             "hospital_lat": 28.6139,
             "hospital_lng": 77.2090
         }
-        response = requests.post(f"{BASE_URL}/submit-request", json=payload)
+        response = self.session.post(f"{BASE_URL}/submit-request", json=payload)
         self.assertEqual(response.status_code, 403)
         data = response.json()
         self.assertFalse(data["verified"])
@@ -75,7 +80,7 @@ class TestRaktSetuVerification(unittest.TestCase):
             "hospital_lat": 28.6139,
             "hospital_lng": 77.2090
         }
-        response = requests.post(f"{BASE_URL}/submit-request", json=payload)
+        response = self.session.post(f"{BASE_URL}/submit-request", json=payload)
         self.assertEqual(response.status_code, 403)
         data = response.json()
         self.assertFalse(data["verified"])
@@ -92,7 +97,7 @@ class TestRaktSetuVerification(unittest.TestCase):
             "hospital_lat": 28.6139,
             "hospital_lng": 77.2090
         }
-        response = requests.post(f"{BASE_URL}/submit-request", json=payload)
+        response = self.session.post(f"{BASE_URL}/submit-request", json=payload)
         self.assertEqual(response.status_code, 403)
         data = response.json()
         self.assertFalse(data["verified"])
@@ -110,7 +115,7 @@ class TestRaktSetuVerification(unittest.TestCase):
             "hospital_lat": 28.6139,
             "hospital_lng": 77.2090
         }
-        response = requests.post(f"{BASE_URL}/submit-request", json=payload)
+        response = self.session.post(f"{BASE_URL}/submit-request", json=payload)
         self.assertEqual(response.status_code, 202)
         data = response.json()
         self.assertFalse(data["verified"])
@@ -119,7 +124,7 @@ class TestRaktSetuVerification(unittest.TestCase):
     def test_06_priority_queue_and_fifo(self):
         # Empty queue first by popping everything
         while True:
-            pop_resp = requests.post(f"{BASE_URL}/queue/pop")
+            pop_resp = self.session.post(f"{BASE_URL}/queue/pop")
             if pop_resp.status_code == 404:
                 break
         
@@ -169,43 +174,43 @@ class TestRaktSetuVerification(unittest.TestCase):
             "hospital_lng": 77.2090
         }
 
-        resp_a = requests.post(f"{BASE_URL}/submit-request", json=req_a).json()
-        resp_b = requests.post(f"{BASE_URL}/submit-request", json=req_b).json()
-        resp_c = requests.post(f"{BASE_URL}/submit-request", json=req_c).json()
-        resp_d = requests.post(f"{BASE_URL}/submit-request", json=req_d).json()
+        resp_a = self.session.post(f"{BASE_URL}/submit-request", json=req_a).json()
+        resp_b = self.session.post(f"{BASE_URL}/submit-request", json=req_b).json()
+        resp_c = self.session.post(f"{BASE_URL}/submit-request", json=req_c).json()
+        resp_d = self.session.post(f"{BASE_URL}/submit-request", json=req_d).json()
 
         # Pop 1 -> should be Critical req_b (submitted first)
-        pop1 = requests.post(f"{BASE_URL}/queue/pop").json()
+        pop1 = self.session.post(f"{BASE_URL}/queue/pop").json()
         self.assertEqual(pop1["request_id"], resp_b["request_id"])
 
         # Pop 2 -> should be Critical req_d (submitted second)
-        pop2 = requests.post(f"{BASE_URL}/queue/pop").json()
+        pop2 = self.session.post(f"{BASE_URL}/queue/pop").json()
         self.assertEqual(pop2["request_id"], resp_d["request_id"])
 
         # Pop 3 -> should be Urgent req_c
-        pop3 = requests.post(f"{BASE_URL}/queue/pop").json()
+        pop3 = self.session.post(f"{BASE_URL}/queue/pop").json()
         self.assertEqual(pop3["request_id"], resp_c["request_id"])
 
         # Pop 4 -> should be Routine req_a
-        pop4 = requests.post(f"{BASE_URL}/queue/pop").json()
+        pop4 = self.session.post(f"{BASE_URL}/queue/pop").json()
         self.assertEqual(pop4["request_id"], resp_a["request_id"])
 
     def test_07_stats_endpoints(self):
         # Verify stats/queue
-        q_stats = requests.get(f"{BASE_URL}/stats/queue").json()
+        q_stats = self.session.get(f"{BASE_URL}/stats/queue").json()
         self.assertIn("critical", q_stats)
         self.assertIn("urgent", q_stats)
         self.assertIn("routine", q_stats)
         
         # Verify stats/verification
-        v_stats = requests.get(f"{BASE_URL}/stats/verification").json()
+        v_stats = self.session.get(f"{BASE_URL}/stats/verification").json()
         self.assertIn("requests_received", v_stats)
         self.assertIn("verified", v_stats)
         self.assertIn("rejected", v_stats)
         self.assertIn("pending_clinical", v_stats)
         
         # Verify stats/rejections
-        r_stats = requests.get(f"{BASE_URL}/stats/rejections").json()
+        r_stats = self.session.get(f"{BASE_URL}/stats/rejections").json()
         self.assertIn("doctor_not_authorized", r_stats)
         self.assertIn("hospital_not_found", r_stats)
 

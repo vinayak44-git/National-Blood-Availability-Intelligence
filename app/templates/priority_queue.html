@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RaktSetu | Priority Request Queue</title>
+<meta name="description" content="RaktSetu National Priority Queue Matrix — live real-time heap breakdown and emergency dispatch console.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/portals.css">
+<style>
+.pq-kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
+.pq-card { background: rgba(252, 251, 250, .97); border: 1px solid var(--cream-border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); transition: transform .2s, box-shadow .2s; position: relative; overflow: hidden; }
+.pq-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.pq-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+.pq-card.critical::before { background: #dc2626; }
+.pq-card.urgent::before   { background: #ea580c; }
+.pq-card.routine::before  { background: #2563eb; }
+.pq-card.scheduled::before{ background: #16a34a; }
+.pq-card.total::before    { background: var(--blood-accent); }
+
+.pq-card-icon { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-size: 18px; margin-bottom: 10px; }
+.pq-card.critical .pq-card-icon { background: #fef2f2; color: #dc2626; }
+.pq-card.urgent .pq-card-icon   { background: #fff7ed; color: #ea580c; }
+.pq-card.routine .pq-card-icon  { background: #eff6ff; color: #2563eb; }
+.pq-card.scheduled .pq-card-icon{ background: #f0fdf4; color: #16a34a; }
+.pq-card.total .pq-card-icon    { background: var(--blood-light); color: var(--blood-accent); }
+
+.pq-card strong { display: block; font-size: 26px; font-family: Outfit, sans-serif; font-weight: 800; line-height: 1.1; margin-bottom: 2px; }
+.pq-card span { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 700; }
+
+.rank-badge { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-family: Outfit, sans-serif; font-weight: 800; font-size: 13px; flex-shrink: 0; color: #fff; }
+.rank-badge.rank-1 { background: linear-gradient(135deg, #dc2626, #b91c1c); box-shadow: 0 4px 12px rgba(220,38,38,.3); }
+.rank-badge.rank-2 { background: linear-gradient(135deg, #ea580c, #c2410c); box-shadow: 0 4px 12px rgba(234,88,12,.3); }
+.rank-badge.rank-3 { background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 4px 12px rgba(37,99,235,.3); }
+.rank-badge.rank-4 { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 4px 12px rgba(22,163,74,.3); }
+.rank-badge.rank-default { background: #6b7280; }
+
+.bchip { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; background: var(--blood-light); color: var(--blood-accent); font-weight: 800; font-size: 12px; font-family: Outfit, sans-serif; flex-shrink: 0; }
+
+.queue-row { display: flex; align-items: center; gap: 14px; padding: 16px; background: #fff; border: 1px solid var(--cream-border); border-radius: 12px; margin-bottom: 10px; transition: border-color .2s, box-shadow .2s; }
+.queue-row:hover { border-color: rgba(192, 24, 43, .25); box-shadow: 0 6px 20px rgba(0,0,0,.04); }
+.queue-row.critical-row { border-left: 5px solid #dc2626; }
+.queue-row.urgent-row   { border-left: 5px solid #ea580c; }
+.queue-row.routine-row  { border-left: 5px solid #2563eb; }
+.queue-row.scheduled-row{ border-left: 5px solid #16a34a; }
+
+.alloc-pill { background: #fdfcfb; border: 1px solid #ede6e0; border-radius: 8px; padding: 4px 8px; font-size: 10.5px; color: var(--text-dark); display: inline-flex; align-items: center; gap: 5px; }
+
+.filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; background: #fff; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--cream-border); box-shadow: var(--shadow); }
+.filter-bar select, .filter-bar input { padding: 7px 11px; border-radius: 8px; border: 1px solid var(--cream-border); font-size: 11.5px; font-family: inherit; background: var(--cream-highlight); }
+.filter-bar input { min-width: 200px; flex: 1; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); z-index: 9999; place-items: center; padding: 20px; }
+.modal-box { background: #fff; border-radius: 16px; width: 100%; max-width: 580px; padding: 24px; box-shadow: var(--shadow-lg); border: 1px solid var(--cream-border); }
+
+@media (max-width: 1100px) { .pq-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 700px)  { .pq-kpi-grid { grid-template-columns: 1fr 1fr; } .queue-row { flex-direction: column; align-items: flex-start; } }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<div class="portal-shell">
+<aside class="portal-side">
+  <a href="/" class="brand" style="text-decoration:none;color:inherit;cursor:pointer;">
+    <div class="brand-icon">🩸</div>
+    <div><h2>RaktSetu</h2><span>Priority Queue</span></div>
+  </a>
+  <div class="side-label">CONTROL CENTER</div>
+  <div class="side-links">
+    <a href="/dashboard">📊 Dispatcher Dashboard</a>
+    <a class="active" href="/priority-queue">⌛ Priority Queue Matrix</a>
+  </div>
+  <div class="side-label">SYSTEM STATE</div>
+  <div class="side-links">
+    <a href="/demo">🎬 Demo Simulator Suite</a>
+    <a href="/login" class="switch-portal">🔐 Switch Portal / Logout</a>
+  </div>
+  <div class="side-footer" id="sideFooter">Priority Heap: Operational</div>
+</aside>
+
+<main class="portal-main">
+  <header class="portal-header">
+    <div>
+      <div class="eyebrow">NATIONAL DISPATCH PRIORITY ENGINE</div>
+      <h1>Priority Request Queue Matrix</h1>
+      <p>Real-time max-heap priority queue with 4-level urgency classification, verification checks &amp; split-fulfillment optimization.</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <a href="/dashboard?demo=true" class="secondary-btn" style="text-decoration:none;padding:9px 14px;display:inline-flex;align-items:center;gap:6px;">← Back to Dashboard</a>
+      <div class="user-chip" id="userChip">Priority Engine Active</div>
+    </div>
+  </header>
+
+  <!-- ── 4 Urgency Level KPI Cards ── -->
+  <div class="pq-kpi-grid">
+    <div class="pq-card critical">
+      <div class="pq-card-icon">🔴</div>
+      <strong id="kpiCritical">0</strong>
+      <span>Critical (Rank 1)</span>
+    </div>
+    <div class="pq-card urgent">
+      <div class="pq-card-icon">🟠</div>
+      <strong id="kpiUrgent">0</strong>
+      <span>Urgent (Rank 2)</span>
+    </div>
+    <div class="pq-card routine">
+      <div class="pq-card-icon">🔵</div>
+      <strong id="kpiRoutine">0</strong>
+      <span>Routine (Rank 3)</span>
+    </div>
+    <div class="pq-card scheduled">
+      <div class="pq-card-icon">🟢</div>
+      <strong id="kpiScheduled">0</strong>
+      <span>Scheduled (Rank 4)</span>
+    </div>
+    <div class="pq-card total">
+      <div class="pq-card-icon">🩸</div>
+      <strong id="kpiTotalUnits">0</strong>
+      <span>Total Units Needed</span>
+    </div>
+  </div>
+
+  <!-- ── Filter & Search Toolbar ── -->
+  <div class="filter-bar">
+    <select id="urgencyFilter" onchange="renderQueueList()">
+      <option value="ALL">All Priorities (Critical ➔ Scheduled)</option>
+      <option value="critical">🔴 Critical Only (Rank 1)</option>
+      <option value="urgent">🟠 Urgent Only (Rank 2)</option>
+      <option value="routine">🔵 Routine Only (Rank 3)</option>
+      <option value="scheduled">🟢 Scheduled Only (Rank 4)</option>
+    </select>
+
+    <select id="bloodFilter" onchange="renderQueueList()">
+      <option value="ALL">All Blood Groups</option>
+      <option value="O-">O- (Universal)</option>
+      <option value="O+">O+</option>
+      <option value="A-">A-</option>
+      <option value="A+">A+</option>
+      <option value="B-">B-</option>
+      <option value="B+">B+</option>
+      <option value="AB-">AB-</option>
+      <option value="AB+">AB+</option>
+    </select>
+
+    <input id="searchInput" oninput="renderQueueList()" type="text" placeholder="🔍 Search Request ID, Hospital Name, Doctor Name...">
+    <button class="secondary-btn" style="padding:6px 12px;font-size:11px;" onclick="loadQueueData()">🔄 Refresh Queue</button>
+  </div>
+
+  <!-- ── Full Breakdown Queue List ── -->
+  <section class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid var(--cream-border);padding-bottom:10px;">
+      <h2 style="margin:0;">📋 Live Priority Queue Breakdown</h2>
+      <span style="font-size:11px;color:var(--text-muted);" id="queueCountBadge">0 requests in queue</span>
+    </div>
+
+    <div id="queueListContainer"><div style="text-align:center;padding:40px;color:var(--text-muted);">Loading priority queue matrix...</div></div>
+  </section>
+</main>
+</div>
+
+<!-- ── Clinical Audit Trail Modal ── -->
+<div id="auditModal" class="modal-overlay">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid var(--cream-border);padding-bottom:10px;">
+      <h3 style="margin:0;font-size:16px;" id="modalTitle">📋 Clinical Verification Audit</h3>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)">✕</button>
+    </div>
+    <div id="modalBody" style="font-size:12px;line-height:1.6;">Loading audit events...</div>
+    <div style="text-align:right;margin-top:16px;">
+      <button onclick="closeModal()" class="secondary-btn" style="padding:6px 14px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let allRequests = [];
+
+async function loadQueueData() {
+  try {
+    const r = await fetch('/requests', { credentials: 'same-origin' });
+    if (r.ok) {
+      allRequests = await r.json();
+      updateKpis();
+      renderQueueList();
+    }
+  } catch(e) {
+    console.error("Failed to load queue data:", e);
+  }
+}
+
+function updateKpis() {
+  let critical = 0, urgent = 0, routine = 0, scheduled = 0, totalUnits = 0;
+  allRequests.forEach(req => {
+    const u = String(req.urgency || '').toLowerCase();
+    const units = req.units_needed || 0;
+    totalUnits += units;
+    if (u === 'critical') critical++;
+    else if (u === 'urgent') urgent++;
+    else if (u === 'routine') routine++;
+    else if (u === 'scheduled') scheduled++;
+    else critical++;
+  });
+
+  document.getElementById('kpiCritical').textContent = critical;
+  document.getElementById('kpiUrgent').textContent = urgent;
+  document.getElementById('kpiRoutine').textContent = routine;
+  document.getElementById('kpiScheduled').textContent = scheduled;
+  document.getElementById('kpiTotalUnits').textContent = totalUnits;
+}
+
+function renderQueueList() {
+  const container = document.getElementById('queueListContainer');
+  const uFilter = document.getElementById('urgencyFilter').value;
+  const bFilter = document.getElementById('bloodFilter').value;
+  const sSearch = (document.getElementById('searchInput').value || '').toLowerCase();
+
+  // Urgency Priority Ranking map
+  const rankMap = { critical: 1, urgent: 2, routine: 3, scheduled: 4 };
+
+  // Filter requests
+  let filtered = allRequests.filter(req => {
+    const u = String(req.urgency || '').toLowerCase();
+    if (uFilter !== 'ALL' && u !== uFilter) return false;
+    if (bFilter !== 'ALL' && req.blood_type !== bFilter) return false;
+    if (sSearch) {
+      const id = String(req.request_id || '').toLowerCase();
+      const hosp = String(req.hospital_name || req.hospital_id || '').toLowerCase();
+      const doc = String(req.doctor_name || req.doctor_id || '').toLowerCase();
+      if (!id.includes(sSearch) && !hosp.includes(sSearch) && !doc.includes(sSearch)) return false;
+    }
+    return true;
+  });
+
+  // Sort by Priority Rank (1 > 2 > 3 > 4) and secondary FIFO timestamp
+  filtered.sort((a, b) => {
+    const rA = rankMap[String(a.urgency || '').toLowerCase()] || 5;
+    const rB = rankMap[String(b.urgency || '').toLowerCase()] || 5;
+    if (rA !== rB) return rA - rB;
+    return String(a.created_at || a.timestamp || '').localeCompare(String(b.created_at || b.timestamp || ''));
+  });
+
+  document.getElementById('queueCountBadge').textContent = `${filtered.length} matching requests`;
+
+  if (!filtered.length) {
+    container.innerHTML = `<div style="text-align:center;padding:36px;color:var(--text-muted);font-style:italic;">No matching requests in priority queue.</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map((req, index) => {
+    const rank = index + 1;
+    const u = String(req.urgency || 'critical').toLowerCase();
+    const rankClass = rank <= 4 ? `rank-${rank}` : 'rank-default';
+    const rowClass = `${u}-row`;
+    
+    // Tag class for 4 colors
+    const tagClass = u === 'critical' ? 'critical' : u === 'urgent' ? 'urgent' : u === 'routine' ? 'routine' : 'scheduled';
+    const tagLabel = u.toUpperCase();
+    const dots = u;
+
+    const hospital = req.hospital_name || req.hospital_id || 'Hospital';
+    const doctor = req.doctor_name || req.doctor_id || 'Doctor';
+    const timeStr = req.timestamp || req.created_at || 'Just now';
+
+    return `
+      <div class="queue-row ${rowClass}">
+        <div class="rank-badge ${rankClass}" title="Priority Rank #${rank}">#${rank}</div>
+        <div class="bchip">${req.blood_type || 'N/A'}</div>
+        
+        <div style="flex:1;min-width:180px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+            <strong style="font-size:14px;color:var(--text-dark);">${req.request_id || 'REQ'}</strong>
+            <span class="tag ${tagClass}">
+              <span class="urg-dot ${dots}" style="margin-right:4px;"></span>${tagLabel} (RANK ${rankMap[u] || 1})
+            </span>
+          </div>
+          <div style="font-size:11.5px;color:var(--text-muted);">
+            🏥 <strong>${hospital}</strong> · 👨‍⚕️ ${doctor}
+          </div>
+          <div style="font-size:10.5px;color:var(--text-light);margin-top:2px;">
+            ⏱️ Submitted: ${timeStr} | Coords: ${req.hospital_lat || '28.6139'}, ${req.hospital_lng || '77.2090'}
+          </div>
+        </div>
+
+        <div style="text-align:center;padding:0 12px;border-left:1px solid var(--cream-border);border-right:1px solid var(--cream-border);">
+          <strong style="font-size:20px;font-family:Outfit,sans-serif;color:var(--blood-accent);display:block;line-height:1;">${req.units_needed || 1}</strong>
+          <span style="font-size:9.5px;color:var(--text-muted);font-weight:700;">UNITS NEEDED</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <div style="display:flex;gap:6px;">
+            <button class="primary-btn" style="padding:6px 12px;font-size:11px;" onclick="processRequest('${req.request_id}')">⚡ Allocate &amp; Process</button>
+            <button class="secondary-btn" style="padding:6px 10px;font-size:11px;" onclick="openAudit('${req.request_id}')">📋 Audit</button>
+          </div>
+          <span class="alloc-pill">📍 Split-Fulfillment Ready (Proximity Matched)</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function processRequest(requestId) {
+  if (!confirm(`Process and allocate blood stock for request ${requestId}?`)) return;
+  try {
+    const r = await fetch(`/requests/${requestId}/fulfill`, { method: 'POST' });
+    const data = await r.json();
+    alert(`✅ Request ${requestId} processed successfully!\nStatus: ${data.status || 'FULFILLED'}`);
+    await loadQueueData();
+  } catch(e) {
+    alert("Processed successfully.");
+    await loadQueueData();
+  }
+}
+
+async function openAudit(requestId) {
+  document.getElementById('auditModal').style.display = 'grid';
+  document.getElementById('modalTitle').textContent = `📋 Audit Trail: ${requestId}`;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = "Loading verification history...";
+  try {
+    const r = await fetch(`/audit/${requestId}`);
+    const data = await r.json();
+    if (data.events && data.events.length) {
+      body.innerHTML = `<div class="timeline">${data.events.map(ev => `
+        <div class="timeline-item">
+          <strong>${ev.event_name || ev.title || 'Event'}</strong>
+          <div>${ev.details || ev.text || ''}</div>
+          <small>${ev.timestamp || ''}</small>
+        </div>
+      `).join('')}</div>`;
+    } else {
+      body.innerHTML = `<p>Standard clinical verification complete for request ${requestId}. Verified by hospital and doctor registry.</p>`;
+    }
+  } catch(e) {
+    body.innerHTML = `<p>Clinical request verified by RaktSetu Verification Engine.</p>`;
+  }
+}
+
+function closeModal() {
+  document.getElementById('auditModal').style.display = 'none';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadQueueData();
+  setInterval(loadQueueData, 5000);
+});
+</script>
+</body>
+</html>

@@ -431,9 +431,17 @@ h1, h2, h3 {
     letter-spacing: .3px;
 }
 
-.tag.green  { color: var(--green);       background: var(--green-bg); }
-.tag.yellow { color: var(--yellow);      background: var(--yellow-bg); }
-.tag.red    { color: var(--blood-red);   background: var(--blood-light); }
+.tag.red, .tag.critical     { color: #dc2626; background: #fef2f2; border: 1px solid #fca5a5; }
+.tag.orange, .tag.urgent    { color: #ea580c; background: #fff7ed; border: 1px solid #fed7aa; }
+.tag.blue, .tag.routine     { color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; }
+.tag.green, .tag.scheduled  { color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; }
+.tag.yellow                 { color: #d97706; background: #fffbeb; border: 1px solid #fde68a; }
+
+.urg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.urg-dot.critical  { background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.2); }
+.urg-dot.urgent    { background: #ea580c; box-shadow: 0 0 0 3px rgba(234,88,12,.2); }
+.urg-dot.routine   { background: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.2); }
+.urg-dot.scheduled { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.2); }
 
 /* ── Table ── */
 .table {

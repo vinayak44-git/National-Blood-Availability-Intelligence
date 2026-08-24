@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Depends, Request, Response, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from itertools import count
 from pathlib import Path
 from fastapi.staticfiles import StaticFiles
 import traceback
 import json
+import random
 
 from app.provider import router as provider_router
 from app.auth.routes import (
@@ -25,7 +26,7 @@ from app.verification import (
 from app.urgency import classify_urgency
 from app.priority_queue import priority_queue
 from app.audit import log_event
-from app.fullfillment import fulfill_request
+from app.fullfillment import fulfill_request, preview_fulfillment
 from app.sms import (
     parse_sms_request,
     format_sms_response,
@@ -60,6 +61,7 @@ app.mount(
 
 def load_queue_from_db():
     try:
+        priority_queue.clear()
         conn = get_connection()
         rows = conn.execute(
             """
@@ -314,6 +316,33 @@ def mark_notification_read(notification_id: int):
     return {"status": "success"}
 
 # ── Demo Suite Execution Endpoint ──────────────────────────────
+@app.post("/donors/callout")
+def donor_callout(payload: dict):
+    blood_type = payload.get("blood_type", "O-")
+    units = payload.get("units_needed", 3)
+    hospital = payload.get("hospital_name", "Metro General Hospital")
+    broadcast_id = f"SMS-BRD-{datetime.now().strftime('%M%S')}"
+    timestamp = current_timestamp()
+    
+    conn = get_connection()
+    conn.execute("""
+        INSERT INTO notifications (title, message, type, role, is_read, created_at)
+        VALUES (?, ?, 'critical', 'all', 0, ?)
+    """, (
+        f"🚨 Rare Donor Alert: {blood_type} Needed",
+        f"Emergency Callout {broadcast_id} sent to 14 voluntary donors for {units} units of {blood_type} at {hospital}.",
+        timestamp
+    ))
+    conn.commit()
+    conn.close()
+    
+    return {
+        "status": "success",
+        "broadcast_id": broadcast_id,
+        "message": f"Emergency SMS Callout broadcasted to 14 voluntary {blood_type} donors in Delhi NCR!"
+    }
+
+
 @app.post("/demo/simulate")
 def simulate_demo_scenario(scenario: dict):
     action = scenario.get("action")
@@ -329,20 +358,122 @@ def simulate_demo_scenario(scenario: dict):
                 prescription_id, clinical_note, created_at
             ) VALUES (?, 'H02', 'D03', 'O-', 3, 'critical', 28.6280, 77.2180, 1, 'queued', 'RX-DEMO-99', 'Demo Critical Trauma Patient', ?)
         """, (req_id, timestamp))
+        conn.execute("""
+            INSERT INTO notifications (title, message, type, role, is_read, created_at)
+            VALUES (?, ?, 'critical', 'all', 0, ?)
+        """, ("🔴 Emergency O- Request Queued", f"Critical Trauma Request {req_id} received from Metro General Hospital.", timestamp))
         conn.commit()
         conn.close()
+        
+        log_event(req_id, "request_received", "Blood request received")
+        log_event(req_id, "hospital_verified", "hospital verified: Metro General Hospital")
+        log_event(req_id, "doctor_verified", "doctor verified: Dr. Ananya Roy")
+        log_event(req_id, "urgency_assigned", "urgency=critical, priority=1")
+        log_event(req_id, "priority_queued", "queued with priority=1")
+        
         load_queue_from_db()
-        return {"status": "success", "message": f"Critical Request {req_id} generated and queued into Priority Engine!", "request_id": req_id}
+        return {"status": "success", "message": f"Critical Request {req_id} generated & pushed into Priority Queue!", "request_id": req_id}
+
+    elif action == "simulate_split":
+        req_id = generate_request_id()
+        conn.execute("""
+            INSERT INTO blood_requests (
+                request_id, hospital_id, doctor_id, blood_type, units_needed,
+                urgency, hospital_lat, hospital_lng, verified, status,
+                prescription_id, clinical_note, created_at
+            ) VALUES (?, 'H01', 'D01', 'AB-', 5, 'urgent', 28.6139, 77.2090, 1, 'queued', 'RX-DEMO-SPLIT', 'High-Volume Emergency Surgery', ?)
+        """, (req_id, timestamp))
+        conn.execute("""
+            INSERT INTO notifications (title, message, type, role, is_read, created_at)
+            VALUES (?, ?, 'success', 'all', 0, ?)
+        """, ("⚡ Split Allocation Calculated", f"Optimal 2-bank split allocation calculated for high-volume request {req_id}.", timestamp))
+        conn.commit()
+        conn.close()
+        
+        log_event(req_id, "request_received", "High-Volume AB- request received")
+        log_event(req_id, "allocation_calculated", "Split allocation: Bank B01 (3u) + Bank B02 (2u)")
+        load_queue_from_db()
+        return {"status": "success", "message": f"High-Volume Request {req_id} queued! Split Allocation: Bank B01 (3u) + Bank B02 (2u).", "request_id": req_id}
+
+    elif action == "simulate_gps":
+        shipment_id = f"SHP-DRONE-{datetime.now().strftime('%M%S')}"
+        conn.execute("""
+            INSERT INTO shipments (
+                shipment_id, request_id, provider_id, vehicle_id, vehicle_type,
+                source_lat, source_lng, destination_lat, destination_lng,
+                current_lat, current_lng, status, eta_minutes, cold_chain_temp, created_at, updated_at
+            ) VALUES (?, 'R1001', 'B01', 'ICMR-DRONE-04', 'drone', 28.6139, 77.2090, 28.6280, 77.2180, 28.6200, 77.2130, 'IN_TRANSIT', 12, 3.8, ?, ?)
+        """, (shipment_id, timestamp, timestamp))
+        conn.execute("""
+            INSERT INTO notifications (title, message, type, role, is_read, created_at)
+            VALUES (?, ?, 'info', 'all', 0, ?)
+        """, ("🚁 Drone GPS Transit Launched", f"Aerial Drone Shipment {shipment_id} launched with 3.8°C cold-chain telemetry.", timestamp))
+        conn.commit()
+        conn.close()
+        log_event("R1001", "shipment_dispatched", f"Drone shipment {shipment_id} dispatched (3.8°C cold chain)")
+        return {"status": "success", "message": f"ICMR Drone Transit {shipment_id} launched! Live Cold-Chain: 3.8°C (ETA: 12 Mins)."}
 
     elif action == "reset_demo":
-        conn.execute("DELETE FROM blood_requests WHERE prescription_id LIKE 'RX-DEMO%'")
+        conn.execute("DELETE FROM blood_requests WHERE prescription_id LIKE 'RX-DEMO%' OR request_id LIKE 'R-DEMO%'")
+        conn.execute("DELETE FROM shipments WHERE shipment_id LIKE 'SHP-DRONE%' OR shipment_id LIKE 'SHP-SIM%'")
+        conn.execute("DELETE FROM notifications WHERE message LIKE '%Demo%' OR message LIKE '%Callout%' OR message LIKE '%Drone%'")
         conn.commit()
         conn.close()
         load_queue_from_db()
-        return {"status": "success", "message": "Demo state reset successfully!"}
+        return {"status": "success", "message": "Demo suite state reset successfully!"}
 
     conn.close()
     return {"status": "success", "message": f"Scenario {action} executed successfully!"}
+
+
+@app.post("/requests/simulate")
+def simulate_request(payload: dict):
+    hospital_id = payload.get("hospital_id", "H01")
+    doctor_id = payload.get("doctor_id", "D01")
+    blood_type = payload.get("blood_type", "O-")
+    units_needed = int(payload.get("units_needed", 2))
+    urgency_input = payload.get("urgency", "critical")
+    prescription_id = payload.get("prescription_id", "RX-USSD-RURAL")
+    clinical_note = payload.get("clinical_note", "Transmitted via Rural USSD Gateway (*140*RAKT#)")
+
+    request_id = generate_request_id()
+    timestamp = current_timestamp()
+
+    conn = get_connection()
+    hrow = conn.execute("SELECT lat, lng, name FROM hospitals WHERE hospital_id = ?", (hospital_id,)).fetchone()
+    lat = hrow["lat"] if hrow else 28.6139
+    lng = hrow["lng"] if hrow else 77.2090
+    hname = hrow["name"] if hrow else hospital_id
+
+    conn.execute("""
+        INSERT INTO blood_requests (
+            request_id, hospital_id, doctor_id, blood_type, units_needed,
+            urgency, hospital_lat, hospital_lng, verified, status,
+            prescription_id, clinical_note, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'queued', ?, ?, ?)
+    """, (
+        request_id, hospital_id, doctor_id, blood_type, units_needed,
+        urgency_input, lat, lng, prescription_id, clinical_note, timestamp
+    ))
+
+    conn.execute("""
+        INSERT INTO notifications (title, message, type, role, is_read, created_at)
+        VALUES (?, ?, 'critical', 'all', 0, ?)
+    """, (f"📲 Rural GSM Request Queued ({request_id})", f"Emergency {blood_type} request received via USSD from {hname}.", timestamp))
+
+    conn.commit()
+    conn.close()
+
+    log_event(request_id, "request_received", f"USSD Request received: {clinical_note}")
+    log_event(request_id, "hospital_verified", f"hospital verified: {hname}")
+    log_event(request_id, "doctor_verified", f"doctor verified: {doctor_id}")
+    log_event(request_id, "urgency_assigned", f"urgency={urgency_input}, priority=1")
+    log_event(request_id, "priority_queued", "queued with priority=1")
+
+    load_queue_from_db()
+    return {"status": "success", "request_id": request_id, "message": f"USSD Request {request_id} queued successfully."}
+
+
 
 
 @app.post("/submit-request")
@@ -658,6 +789,11 @@ def fulfill_blood_request(request_id: str):
     return fulfill_request(request_id)
 
 
+@app.get("/fullfillment/{request_id}/preview")
+def preview_blood_request(request_id: str):
+    return preview_fulfillment(request_id)
+
+
 @app.get("/queue")
 def get_queue():
 
@@ -887,6 +1023,20 @@ def dashboard(request: Request):
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/login?role=dispatcher", status_code=303)
 
+@app.get("/priority-queue", include_in_schema=False)
+def priority_queue_page(request: Request):
+    token = request.cookies.get("access_token")
+    user = decode_access_token(token) if token else None
+    if user:
+        return FileResponse(BASE_DIR / "templates" / "priority_queue.html")
+    demo = request.query_params.get("demo") == "true" or "demo" in request.headers.get("referer", "")
+    if demo:
+        new_token = create_access_token(user_id="U0003", role="dispatcher")
+        resp = FileResponse(BASE_DIR / "templates" / "priority_queue.html")
+        resp.set_cookie(key="access_token", value=new_token, httponly=True, samesite="lax")
+        return resp
+    return FileResponse(BASE_DIR / "templates" / "priority_queue.html")
+
 @app.get("/requester", include_in_schema=False)
 def requester(request: Request):
     token = request.cookies.get("access_token")
@@ -931,6 +1081,392 @@ def patient(request: Request):
         return resp
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/login?role=patient", status_code=303)
+
+
+# ──────────────────────────────────────────────────────────
+# DONOR PORTAL & VOLUNTARY BLOOD DONATION API
+# ──────────────────────────────────────────────────────────
+
+class DonorSubmission(_BaseModel):
+    donor_name: str
+    phone: str = "+91 98765 43210"
+    email: str = "donor@raktsetu.gov.in"
+    age: int = 25
+    gender: str = "Male"
+    blood_type: str
+    bank_id: str = "B01"
+    units: int = 1
+    appointment_date: str = None
+    slot_time: str = "10:00 AM - 11:30 AM"
+    auto_complete: bool = True
+    notes: str = None
+
+
+@app.get("/donor", include_in_schema=False)
+def donor_page(request: Request):
+    return FileResponse(BASE_DIR / "templates" / "donor.html")
+
+
+@app.get("/donor/banks")
+def get_donor_banks():
+    conn = get_connection()
+    banks = conn.execute("SELECT bank_id, name, address, contact_number FROM blood_banks WHERE is_active = 1 ORDER BY bank_id").fetchall()
+    conn.close()
+    return {"banks": [dict(b) for b in banks]}
+
+
+def _execute_donation_fulfillment(
+    conn, donation_id, donor_name, phone, blood_type, bank_id, units_donated, timestamp,
+    hb_level: float = 14.1, bp_reading: str = "120/80 mmHg", tti_passed: bool = True, technician_name: str = "Dr. R. K. Sharma, MD Pathologist"
+):
+    if hb_level < 12.5:
+        raise HTTPException(status_code=400, detail=f"Hemoglobin level ({hb_level} g/dL) is below required safety threshold (12.5 g/dL). Donation deferred.")
+
+    if not tti_passed:
+        raise HTTPException(status_code=400, detail="Transfusion-Transmitted Infection (TTI) screening returned positive. Blood collection aborted for patient safety.")
+
+    # 1. Verify blood bank exists (by ID or Name)
+    bank = conn.execute("SELECT name FROM blood_banks WHERE bank_id = ? OR name = ?", (bank_id, bank_id)).fetchone()
+    bank_name = bank["name"] if bank else (bank_id or "RaktSetu Central Blood Bank")
+
+    # If bank_id was given as name, try resolving actual bank_id
+    real_bank_row = conn.execute("SELECT bank_id FROM blood_banks WHERE bank_id = ? OR name = ?", (bank_id, bank_id)).fetchone()
+    actual_bank_id = real_bank_row["bank_id"] if real_bank_row else "B01"
+
+    # 2. Update Inventory (Increase stock)
+    inv_row = conn.execute(
+        "SELECT inventory_id, units FROM blood_inventory WHERE bank_id = ? AND blood_type = ?",
+        (actual_bank_id, blood_type)
+    ).fetchone()
+
+    if inv_row:
+        new_units = inv_row["units"] + units_donated
+        conn.execute(
+            "UPDATE blood_inventory SET units = ?, updated_at = ? WHERE inventory_id = ?",
+            (new_units, timestamp, inv_row["inventory_id"])
+        )
+    else:
+        new_units = units_donated
+        conn.execute(
+            """
+            INSERT INTO blood_inventory (bank_id, blood_type, units, expiry_date, updated_at)
+            VALUES (?, ?, ?, date('now', '+35 days'), ?)
+            """,
+            (actual_bank_id, blood_type, units_donated, timestamp)
+        )
+
+    # 3. Match & Reduce/Fulfill Queued Requests in Priority Queue
+    queued_requests = conn.execute(
+        """
+        SELECT request_id, hospital_id, doctor_id, blood_type, units_needed, urgency
+        FROM blood_requests
+        WHERE status = 'queued' AND verified = 1 AND UPPER(blood_type) = ?
+        ORDER BY 
+          CASE urgency 
+            WHEN 'critical' THEN 1 
+            WHEN 'urgent' THEN 2 
+            WHEN 'routine' THEN 3 
+            WHEN 'scheduled' THEN 4 
+          END ASC, 
+          created_at ASC
+        """,
+        (blood_type,)
+    ).fetchall()
+
+    remaining_units = units_donated
+    affected_requests = []
+    events_to_log = []
+
+    for req in queued_requests:
+        if remaining_units <= 0:
+            break
+
+        req_id = req["request_id"]
+        needed = req["units_needed"]
+        units_to_apply = min(needed, remaining_units)
+
+        if needed <= remaining_units:
+            conn.execute("UPDATE blood_requests SET status = 'fulfilled' WHERE request_id = ?", (req_id,))
+            events_to_log.append((req_id, "fulfilled_by_donor", f"Request fully satisfied by {donor_name}'s voluntary donation of {units_to_apply} units to {bank_name}."))
+            affected_requests.append({
+                "request_id": req_id,
+                "urgency": req["urgency"],
+                "units_fulfilled": units_to_apply,
+                "status": "FULFILLED",
+                "message": f"Request {req_id} fully satisfied and cleared from priority queue!"
+            })
+            remaining_units -= units_to_apply
+        else:
+            new_needed = needed - remaining_units
+            conn.execute("UPDATE blood_requests SET units_needed = ? WHERE request_id = ?", (new_needed, req_id))
+            events_to_log.append((req_id, "partially_fulfilled_by_donor", f"Units needed reduced from {needed} to {new_needed} by {donor_name}'s voluntary donation of {remaining_units} units."))
+            affected_requests.append({
+                "request_id": req_id,
+                "urgency": req["urgency"],
+                "units_fulfilled": remaining_units,
+                "status": f"PARTIAL (Remaining: {new_needed})",
+                "message": f"Request {req_id} units needed reduced to {new_needed}."
+            })
+            remaining_units = 0
+
+    # 4. Generate Certificate & Barcode IDs
+    cert_id = f"CERT-RKT-2026-{random.randint(10000, 99999)}"
+    bag_barcode = f"BAG-{blood_type.replace('+','POS').replace('-','NEG')}-{random.randint(10000, 99999)}"
+    tti_summary = "HIV/HBsAg/HCV/VDRL: ALL CLEAR (Negative)"
+    lab_details = f"Hb: {hb_level} g/dL (PASSED) | BP: {bp_reading} | TTI Panel: Clear | Bag Barcode: {bag_barcode} | Officer: {technician_name}"
+
+    conn.execute(
+        """
+        UPDATE donations 
+        SET status = 'COMPLETED',
+            lab_test_details = ?,
+            certificate_id = ?,
+            hb_level = ?,
+            bp_reading = ?,
+            tti_screening = ?,
+            bag_barcode = ?,
+            requests_fulfilled = ?,
+            completed_at = ?
+        WHERE donation_id = ?
+        """,
+        (
+            lab_details,
+            cert_id,
+            hb_level,
+            bp_reading,
+            tti_summary,
+            bag_barcode,
+            json.dumps([r["request_id"] for r in affected_requests]),
+            timestamp,
+            donation_id
+        )
+    )
+
+    notification_msg = f"Voluntary Donation {donation_id} Lab Test Passed & Completed: {donor_name} donated {units_donated} units of {blood_type} at {bank_name} (Bag: {bag_barcode}). Certificate {cert_id} Issued!"
+    conn.execute(
+        """
+        INSERT INTO notifications (title, message, type, role, is_read, created_at)
+        VALUES (?, ?, 'success', 'all', 0, ?)
+        """,
+        (f"🩸 Donation Completed ({blood_type})", notification_msg, timestamp)
+    )
+
+    return {
+        "bank_name": bank_name,
+        "new_bank_units": new_units,
+        "affected_requests": affected_requests,
+        "events_to_log": events_to_log,
+        "certificate_id": cert_id,
+        "bag_barcode": bag_barcode,
+        "hb_level": hb_level,
+        "bp_reading": bp_reading,
+        "tti_summary": tti_summary,
+        "technician_name": technician_name,
+        "lab_details": lab_details
+    }
+
+
+@app.post("/donor/donate")
+def submit_donor_donation(payload: DonorSubmission):
+    if payload.units < 1 or payload.units > 10:
+        raise HTTPException(status_code=400, detail="Donation units must be between 1 and 10.")
+    
+    blood_type = payload.blood_type.strip().upper()
+    bank_id = payload.bank_id.strip()
+    donor_name = payload.donor_name.strip()
+    units_donated = payload.units
+    timestamp = current_timestamp()
+
+    app_date = payload.appointment_date or (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    slot = payload.slot_time or "10:00 AM - 11:30 AM"
+
+    conn = get_connection()
+
+    bank = conn.execute("SELECT name FROM blood_banks WHERE bank_id = ? OR name = ?", (bank_id, bank_id)).fetchone()
+    bank_name = bank["name"] if bank else (bank_id or "LifeBlood Blood Bank")
+
+    donation_id = f"DON-{datetime.now().strftime('%m%d%H%M%S')}"
+
+    # Initial registration: SCHEDULED status
+    conn.execute(
+        """
+        INSERT INTO donations (
+            donation_id, donor_name, phone, email, age, gender, blood_type, bank_id, units,
+            status, appointment_date, slot_time, lab_test_details, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            donation_id,
+            donor_name,
+            payload.phone,
+            payload.email,
+            payload.age,
+            payload.gender,
+            blood_type,
+            bank_id,
+            units_donated,
+            "SCHEDULED",
+            app_date,
+            slot,
+            "Assigned Lab Screening: Hemoglobin Check, ABO/Rh Crossmatch, TTI Infection Panel",
+            timestamp
+        )
+    )
+    conn.commit()
+
+    is_completed = payload.auto_complete
+    completion_data = None
+    if is_completed:
+        completion_data = _execute_donation_fulfillment(conn, donation_id, donor_name, payload.phone, blood_type, bank_id, units_donated, timestamp)
+        conn.commit()
+
+    conn.close()
+
+    if is_completed and completion_data:
+        for rid, ev_name, ev_detail in completion_data["events_to_log"]:
+            log_event(rid, ev_name, ev_detail)
+        load_queue_from_db()
+        
+        return {
+            "status": "success",
+            "donation_status": "COMPLETED",
+            "donation_id": donation_id,
+            "donor_name": donor_name,
+            "blood_type": blood_type,
+            "units_donated": units_donated,
+            "units": units_donated,
+            "bank_name": bank_name,
+            "appointment_date": app_date,
+            "slot_time": slot,
+            "hb_level": completion_data["hb_level"],
+            "bp_reading": completion_data["bp_reading"],
+            "bag_barcode": completion_data["bag_barcode"],
+            "lab_test_details": completion_data["lab_details"],
+            "certificate_id": completion_data["certificate_id"],
+            "new_bank_units": completion_data["new_bank_units"],
+            "total_requests_reduced": len(completion_data["affected_requests"]),
+            "requests_affected": completion_data["affected_requests"],
+            "message": f"Thank you, {donor_name}! Lab test passed & blood donation completed. {units_donated} units added to {bank_name} stock and Certificate {completion_data['certificate_id']} issued."
+        }
+
+    return {
+        "status": "success",
+        "donation_status": "SCHEDULED",
+        "donation_id": donation_id,
+        "donor_name": donor_name,
+        "blood_type": blood_type,
+        "units_donated": units_donated,
+        "units": units_donated,
+        "bank_name": bank_name,
+        "appointment_date": app_date,
+        "slot_time": slot,
+        "assigned_tests": [
+            "1. Hemoglobin (Hb) Level Test (Required ≥ 12.5 g/dL)",
+            "2. ABO & Rh Crossmatch Blood Typing",
+            "3. Transfusion-Transmitted Infection (TTI) Screening Panel (HIV, Hepatitis B/C, Syphilis)",
+            "4. Vitals Check (Blood Pressure, Pulse, Body Temp)"
+        ],
+        "message": f"Donation Request Queued for {donor_name}! Pre-donation lab test & blood collection scheduled on {app_date} ({slot}) at {bank_name}."
+    }
+
+
+@app.post("/donor/complete")
+def complete_donor_donation(payload: dict):
+    donation_id = payload.get("donation_id")
+    if not donation_id:
+        raise HTTPException(status_code=400, detail="donation_id is required")
+
+    hb_level = float(payload.get("hb_level", 14.1))
+    bp_sys = int(payload.get("bp_sys", 120))
+    bp_dia = int(payload.get("bp_dia", 80))
+    bp_reading = f"{bp_sys}/{bp_dia} mmHg"
+    tti_passed = payload.get("tti_passed", True)
+    technician_name = payload.get("technician_name", "Dr. R. K. Sharma, MD Pathologist")
+
+    conn = get_connection()
+    row = conn.execute("SELECT * FROM donations WHERE donation_id = ?", (donation_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Donation record not found")
+
+    app_date = row["appointment_date"] or (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+    slot_time = row["slot_time"] or "10:00 AM - 11:30 AM"
+
+    if row["status"] == "COMPLETED":
+        conn.close()
+        return {
+            "status": "already_completed",
+            "donation_status": "COMPLETED",
+            "donation_id": donation_id,
+            "donor_name": row["donor_name"],
+            "blood_type": row["blood_type"],
+            "units_donated": row["units"],
+            "units": row["units"],
+            "appointment_date": app_date,
+            "slot_time": slot_time,
+            "certificate_id": row["certificate_id"],
+            "message": "Donation has already been completed and certificate issued."
+        }
+
+    timestamp = current_timestamp()
+    completion_data = _execute_donation_fulfillment(
+        conn,
+        donation_id,
+        row["donor_name"],
+        row["phone"],
+        row["blood_type"],
+        row["bank_id"],
+        row["units"],
+        timestamp,
+        hb_level=hb_level,
+        bp_reading=bp_reading,
+        tti_passed=tti_passed,
+        technician_name=technician_name
+    )
+    conn.commit()
+    conn.close()
+
+    for rid, ev_name, ev_detail in completion_data["events_to_log"]:
+        log_event(rid, ev_name, ev_detail)
+    load_queue_from_db()
+
+    return {
+        "status": "success",
+        "donation_status": "COMPLETED",
+        "donation_id": donation_id,
+        "donor_name": row["donor_name"],
+        "blood_type": row["blood_type"],
+        "units_donated": row["units"],
+        "units": row["units"],
+        "bank_name": completion_data["bank_name"],
+        "appointment_date": app_date,
+        "slot_time": slot_time,
+        "hb_level": hb_level,
+        "bp_reading": bp_reading,
+        "bag_barcode": completion_data["bag_barcode"],
+        "lab_test_details": completion_data["lab_details"],
+        "certificate_id": completion_data["certificate_id"],
+        "new_bank_units": completion_data["new_bank_units"],
+        "total_requests_reduced": len(completion_data["affected_requests"]),
+        "requests_affected": completion_data["affected_requests"],
+        "message": f"Pre-donation lab test passed! {row['units']} units added to {completion_data['bank_name']} stock. Bag {completion_data['bag_barcode']} registered and Certificate {completion_data['certificate_id']} issued."
+    }
+
+
+@app.get("/donor/donations/recent")
+def get_recent_donations():
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT d.donation_id, d.donor_name, d.blood_type, d.units, d.status, d.appointment_date, d.slot_time, d.certificate_id, d.created_at, b.name as bank_name
+        FROM donations d
+        LEFT JOIN blood_banks b ON d.bank_id = b.bank_id
+        ORDER BY d.created_at DESC
+        LIMIT 10
+        """
+    ).fetchall()
+    conn.close()
+    return {"donations": [dict(r) for r in rows]}
 
 
 # ──────────────────────────────────────────────────────────
@@ -1287,14 +1823,4 @@ def get_emergency_donors(blood_type: str = "O-"):
         {"donor_id": "DON-905", "name": "Karan Malhotra", "blood_type": "O-", "distance_km": 11.2, "phone": "+91 98444 33221", "status": "TRANSIT", "last_donated": "2026-05-25"}
     ]
     matching = [d for d in donors_db if d["blood_type"] == blood_type or blood_type in ["O-", "ALL"]]
-    return {"blood_type": blood_type, "donors": matching if matching else donors_db}
-
-@app.post("/donors/callout")
-def broadcast_donor_callout(data: DonorCalloutRequest):
-    return {
-        "status": "success",
-        "broadcast_id": f"BC-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-        "blood_type": data.blood_type,
-        "donors_alerted": 14,
-        "message": f"🚨 EMERGENCY CALLOUT SENT via SMS/WhatsApp to 14 rare blood donors for {data.units_needed} units of {data.blood_type} at {data.hospital_name}."
-    }
+    return {"blood_type": blood_type, "donors": matching if matching else donors_db}

@@ -12,8 +12,9 @@ Run it directly from the project root:
 import sys
 import time
 import requests
+import os
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:8000")
 
 PASS = "[PASS]"
 FAIL = "[FAIL]"
@@ -40,7 +41,7 @@ session = requests.Session()
 try:
     login_resp = session.post(
         f"{BASE_URL}/auth/login",
-        data={"username": "dispatcher1", "password": "Dispatcher@123"},
+        json={"username": "dispatcher1", "password": "Dispatcher@123"},
         timeout=5
     )
     if login_resp.status_code != 200:
@@ -70,14 +71,23 @@ def safe_get(path):
 
 
 # ----------------------------------------------------------------------
-# 0. ROOT / HEALTH CHECK
+# 0. ROOT / HEALTH CHECK & FRONTEND TEMPLATES
 # ----------------------------------------------------------------------
-section("0. ROOT / HEALTH CHECK")
+section("0. ROOT / HEALTH CHECK & FRONTEND TEMPLATES")
 
 resp = safe_get("/")
 record("GET / returns 200", resp.status_code == 200, f"status={resp.status_code}")
-body = resp.json() if resp.status_code == 200 else {}
-record("GET / reports service running", body.get("status") == "running", f"body={body}")
+record("GET / serves Landing Page HTML", "<!DOCTYPE html>" in resp.text or "RaktSetu" in resp.text, f"body={resp.text[:100]}")
+
+health_resp = safe_get("/health")
+record("GET /health returns 200", health_resp.status_code == 200, f"status={health_resp.status_code}")
+body = health_resp.json() if health_resp.status_code == 200 else {}
+record("GET /health reports service online", body.get("status") == "online", f"body={body}")
+
+# Test frontend portal pages integration
+for portal_path in ["/login", "/register", "/dashboard", "/requester", "/provider", "/patient", "/demo"]:
+    pr = safe_get(portal_path)
+    record(f"GET {portal_path} returns 200", pr.status_code == 200, f"status={pr.status_code}")
 
 
 # ----------------------------------------------------------------------
@@ -433,13 +443,41 @@ for i in range(10):
 record("10 rapid submissions all succeed with unique request_ids", concurrency_ok,
        f"unique_ids_collected={len(ids_seen)}")
 
-# Clean up queue after this test
-while True:
-    r = safe_get("/queue")
-    if r.status_code == 200 and r.json().get("queue_size", 0) > 0:
-        safe_post("/queue/pop")
-    else:
-        break
+# ----------------------------------------------------------------------
+# 17. DONOR PORTAL — Voluntary blood donation, inventory update & queue reduction
+# ----------------------------------------------------------------------
+section("17. DONOR PORTAL — Voluntary donation, inventory update & priority queue reduction")
+
+req_payload = {
+    "hospital_id": "H01",
+    "doctor_id": "D01",
+    "blood_type": "O-",
+    "units_needed": 2,
+    "urgency_input": "critical",
+    "hospital_lat": 28.6139,
+    "hospital_lng": 77.2090,
+    "prescription_id": "RX-DONOR-TEST",
+    "clinical_note": "Awaiting donor fulfillment test"
+}
+r_sub = safe_post("/submit-request", req_payload)
+record("Submit queue request for donor fulfillment test -> 200", r_sub.status_code == 200, f"status={r_sub.status_code}")
+donor_req_id = r_sub.json().get("request_id") if r_sub.status_code == 200 else ""
+
+donor_payload = {
+    "donor_name": "Test Voluntary Donor",
+    "phone": "+91 99999 88888",
+    "blood_type": "O-",
+    "bank_id": "B01",
+    "units": 2
+}
+r_don = safe_post("/donor/donate", donor_payload)
+record("POST /donor/donate -> 200", r_don.status_code == 200, f"status={r_don.status_code}")
+don_data = r_don.json() if r_don.status_code == 200 else {}
+record("Donor response status == success", don_data.get("status") == "success", f"status={don_data.get('status')}")
+record("Donor response contains affected requests", len(don_data.get("requests_affected", [])) >= 1, f"affected={len(don_data.get('requests_affected', []))}")
+
+r_rec = safe_get("/donor/donations/recent")
+record("GET /donor/donations/recent -> 200", r_rec.status_code == 200, f"status={r_rec.status_code}")
 
 
 # ----------------------------------------------------------------------

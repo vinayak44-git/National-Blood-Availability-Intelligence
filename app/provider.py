@@ -15,63 +15,76 @@ router = APIRouter(
 
 @router.get("/inventory")
 def get_inventory(
-    current_user=Depends(require_role("provider"))
+    bank_id: str = None,
+    current_user=Depends(require_role("provider", "dispatcher", "patient", "requester"))
 ):
-    bank_id = current_user.get("bank_id")
-
-    if not bank_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Provider account is not linked to a blood bank"
-        )
+    target_bank = bank_id or current_user.get("bank_id") or "ALL"
 
     conn = get_connection()
 
-    bank = conn.execute(
-        """
-        SELECT
-            bank_id,
-            name,
-            lat,
-            lng,
-            address,
-            contact_number,
-            is_active
-        FROM blood_banks
-        WHERE bank_id = ?
-        """,
-        (bank_id,)
-    ).fetchone()
+    if target_bank and target_bank.upper() != "ALL":
+        bank = conn.execute(
+            """
+            SELECT
+                bank_id,
+                name,
+                lat,
+                lng,
+                address,
+                contact_number,
+                is_active
+            FROM blood_banks
+            WHERE bank_id = ?
+            """,
+            (target_bank,)
+        ).fetchone()
 
-    if not bank:
+        inventory = conn.execute(
+            """
+            SELECT
+                inventory_id,
+                bank_id,
+                blood_type,
+                units,
+                expiry_date,
+                updated_at
+            FROM blood_inventory
+            WHERE bank_id = ?
+            ORDER BY blood_type
+            """,
+            (target_bank,)
+        ).fetchall()
+
         conn.close()
 
-        raise HTTPException(
-            status_code=404,
-            detail="Blood bank not found"
-        )
+        return {
+            "bank": dict(bank) if bank else None,
+            "inventory": [dict(item) for item in inventory]
+        }
+    else:
+        banks = conn.execute("SELECT bank_id, name, address, contact_number FROM blood_banks ORDER BY bank_id").fetchall()
+        inventory = conn.execute(
+            """
+            SELECT
+                bi.inventory_id,
+                bi.bank_id,
+                bb.name AS bank_name,
+                bi.blood_type,
+                bi.units,
+                bi.expiry_date,
+                bi.updated_at
+            FROM blood_inventory bi
+            JOIN blood_banks bb ON bi.bank_id = bb.bank_id
+            ORDER BY bi.bank_id, bi.blood_type
+            """
+        ).fetchall()
 
-    inventory = conn.execute(
-        """
-        SELECT
-            inventory_id,
-            blood_type,
-            units,
-            expiry_date,
-            updated_at
-        FROM blood_inventory
-        WHERE bank_id = ?
-        ORDER BY blood_type
-        """,
-        (bank_id,)
-    ).fetchall()
+        conn.close()
 
-    conn.close()
-
-    return {
-        "bank": dict(bank),
-        "inventory": [dict(item) for item in inventory]
-    }
+        return {
+            "banks": [dict(b) for b in banks],
+            "inventory": [dict(item) for item in inventory]
+        }
 class InventoryUpdate(BaseModel):
     units: int
 
@@ -260,20 +273,12 @@ def accept_provider_request(
         )
     ).fetchone()
 
-    if not inventory:
+    available_units = inventory["units"] if inventory else 0
+    if not inventory or available_units < request["units_needed"]:
         conn.close()
-
         raise HTTPException(
             status_code=400,
-            detail="No available inventory for this blood type"
-        )
-
-    if inventory["units"] < request["units_needed"]:
-        conn.close()
-
-        raise HTTPException(
-            status_code=400,
-            detail="Insufficient blood inventory"
+            detail=f"Insufficient local bank inventory ({available_units} unit(s) available, {request['units_needed']} needed). Use Network Multi-Bank Allocation or Voluntary Donor Portal."
         )
 
     new_units = inventory["units"] - request["units_needed"]
@@ -399,3 +404,12 @@ def dispatch_provider_request(
         "status": "dispatched",
         "timestamp": now
     }
+
+
+@router.post("/requests/{request_id}/network-fulfill")
+def network_fulfill_provider_request(
+    request_id: str,
+    current_user=Depends(require_role("provider", "dispatcher"))
+):
+    from app.fullfillment import fulfill_request
+    return fulfill_request(request_id)

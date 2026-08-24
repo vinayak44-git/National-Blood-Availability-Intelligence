@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaktSetu | Voluntary Donor Portal & Emergency Fulfillment</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #70101b;
+            --primary-light: #9e1c2a;
+            --primary-dark: #3d070c;
+            --bg-dark: #120305;
+            --surface: #ffffff;
+            --surface-subtle: #fcfaf8;
+            --border: #e8dedb;
+            --text-main: #1f1113;
+            --text-muted: #6e5d60;
+            --accent-green: #10b981;
+            --accent-green-bg: #ecfdf5;
+            --accent-blue: #3b82f6;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --shadow-sm: 0 2px 8px rgba(112, 16, 27, 0.06);
+            --shadow-md: 0 8px 24px rgba(112, 16, 27, 0.12);
+            --shadow-lg: 0 16px 36px rgba(112, 16, 27, 0.18);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: #f7f3f2;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header Navigation */
+        .top-navbar {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            background: white;
+            color: var(--primary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .brand-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .brand-badge {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255,255,255,0.18);
+            color: white;
+        }
+
+        /* Container Layout */
+        .main-container {
+            max-width: 1280px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Hero Banner */
+        .hero-banner {
+            background: linear-gradient(135deg, #4d0b13 0%, var(--primary) 60%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 2.5rem 3rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+
+        .hero-banner::after {
+            content: '🩸';
+            position: absolute;
+            right: 2rem;
+            bottom: -1rem;
+            font-size: 10rem;
+            opacity: 0.12;
+            pointer-events: none;
+        }
+
+        .hero-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.9);
+            max-width: 720px;
+            line-height: 1.5;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-icon-wrapper {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .icon-red { background: #fee2e2; color: #dc2626; }
+        .icon-green { background: #dcfce7; color: #16a34a; }
+        .icon-amber { background: #fef3c7; color: #d97706; }
+        .icon-blue { background: #dbeafe; color: #2563eb; }
+
+        .stat-val {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-top: 0.35rem;
+        }
+
+        /* Grid Section (Form & Feedback) */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 960px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            border: 1.5px solid var(--border);
+            font-size: 0.95rem;
+            background: var(--surface-subtle);
+            color: var(--text-main);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(112, 16, 27, 0.12);
+            background: white;
+        }
+
+        /* Blood Group Selector Grid */
+        .blood-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.6rem;
+        }
+
+        .blood-btn {
+            padding: 0.75rem 0.5rem;
+            border-radius: 12px;
+            border: 1.5px solid var(--border);
+            background: var(--surface-subtle);
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .blood-btn:hover {
+            border-color: var(--primary-light);
+            background: rgba(112, 16, 27, 0.04);
+        }
+
+        .blood-btn.selected {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(112, 16, 27, 0.25);
+        }
+
+        /* Units Counter Slider/Buttons */
+        .units-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .unit-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 10px;
+            border: 1.5px solid var(--border);
+            background: var(--surface-subtle);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .unit-btn.selected {
+            background: var(--primary-dark);
+            color: white;
+            border-color: var(--primary-dark);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(112, 16, 27, 0.3);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            margin-top: 1.5rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 26px rgba(112, 16, 27, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Certificate & Queue Result Feedback */
+        .feedback-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .feedback-empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.4;
+        }
+
+        .cert-card {
+            background: linear-gradient(135deg, #fff 0%, #fffbfb 100%);
+            border: 2px solid var(--accent-green);
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .cert-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .cert-badge {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-green-bg);
+            color: var(--accent-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .cert-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .cert-sub {
+            font-size: 0.85rem;
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        .cert-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: var(--surface-subtle);
+            padding: 1rem;
+            border-radius: 12px;
+        }
+
+        .cert-detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cert-lbl {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .cert-val {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* Queue Impact Table */
+        .queue-impact-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .queue-impact-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .queue-impact-item {
+            background: white;
+            border: 1px solid var(--border);
+            padding: 0.85rem 1rem;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .req-tag {
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .urgency-pill {
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .urgency-critical { background: #fee2e2; color: #dc2626; }
+        .urgency-urgent { background: #ffedd5; color: #ea580c; }
+        .urgency-routine { background: #dbeafe; color: #2563eb; }
+
+        .impact-status {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+
+        /* Recent Activity Table */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .data-table th, .data-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table th {
+            background: var(--surface-subtle);
+            font-weight: 700;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="top-navbar">
+        <a href="/" class="brand-container">
+            <div class="brand-icon">🩸</div>
+            <div class="brand-title">RaktSetu</div>
+            <span class="brand-badge">DONOR PORTAL</span>
+        </a>
+        <nav class="nav-links">
+            <a href="/donor?demo=true" class="nav-link active">🩸 Voluntary Donor Portal</a>
+            <a href="/" class="nav-link">🏠 Home Page</a>
+            <a href="/login" class="nav-link">🔐 Switch Portal</a>
+        </nav>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+
+        <!-- Hero Banner -->
+        <section class="hero-banner">
+            <h1 class="hero-title">Voluntary Blood Donation & Priority Queue Clearing</h1>
+            <p class="hero-subtitle">
+                Every voluntary donation directly updates emergency blood bank inventories and automatically satisfies or reduces critical patient requests in the national priority queue!
+            </p>
+        </section>
+
+        <!-- Stats Overview -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon-wrapper icon-red">🩸</div>
+                <div>
+                    <div class="stat-val" id="stat-total-donations">14</div>
+                    <div class="stat-label">Voluntary Donations</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrapper icon-green">📦</div>
+                <div>
+                    <div class="stat-val" id="stat-units-added">38</div>
+                    <div class="stat-label">Units Added to Stock</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrapper icon-amber">⚡</div>
+                <div>
+                    <div class="stat-val" id="stat-queue-reduced">11</div>
+                    <div class="stat-label">Queue Requests Reduced</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon-wrapper icon-blue">💖</div>
+                <div>
+                    <div class="stat-val" id="stat-lives-saved">114</div>
+                    <div class="stat-label">Estimated Lives Saved</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Content Grid: Form + Impact Certificate -->
+        <section class="content-grid">
+
+            <!-- Donation Form Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🩸 Voluntary Donor Registration & Appointment</h2>
+                    <span style="font-size: 0.8rem; font-weight:600; color:var(--accent-green); background:var(--accent-green-bg); padding:0.25rem 0.6rem; border-radius:12px;">Pre-Donation Screening Sync</span>
+                </div>
+
+                <form id="donation-form" onsubmit="handleDonationSubmit(event, false)">
+                    
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label class="form-label" for="donor-name">Donor Full Name</label>
+                            <input type="text" id="donor-name" class="form-input" placeholder="e.g. Siddharth Verma" required value="Siddharth Verma">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="donor-phone">Contact Mobile</label>
+                            <input type="tel" id="donor-phone" class="form-input" placeholder="+91 98765 43210" required value="+91 98765 43210">
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label class="form-label" for="donor-email">Email Address</label>
+                            <input type="email" id="donor-email" class="form-input" placeholder="siddharth@example.com" value="siddharth@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="donor-age">Age</label>
+                            <input type="number" id="donor-age" class="form-input" min="18" max="65" value="26" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="donor-gender">Gender</label>
+                            <select id="donor-gender" class="form-select">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Blood Group</label>
+                        <div class="blood-grid">
+                            <button type="button" class="blood-btn selected" onclick="selectBloodGroup(this, 'O-')">O-</button>
+                            <button type="button" class="blood-btn" onclick="selectBloodGroup(this, 'O+')">O+</button>
+                            <button type="button" class="blood-btn" onclick="selectBloodGroup(this, 'A-')">A-</button>
+                            <button type="button" class="blood-btn" onclick="selectBloodGroup(this, 'A+')">A+</button>
+                            <button type="button" class="blood-btn" onclick="selectBloodGroup(this, 'B-')">B-</button>
+                            <button type="button" class="blood-btn" onclick="selectBloodGroup(this, 'B+')">B+</button>
+                            <button type="button" class="blood-btn" onclick="selectBloodGroup(this, 'AB-')">AB-</button>
+                            <button type="button" class="blood-btn" onclick="selectBloodGroup(this, 'AB+')">AB+</button>
+                        </div>
+                        <input type="hidden" id="selected-blood-type" value="O-">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="target-bank">Target Blood Bank / Testing Facility</label>
+                        <select id="target-bank" class="form-select" required>
+                            <option value="B01">B01 - LifeBlood Blood Bank (Connaught Place)</option>
+                            <option value="B02">B02 - Red Cross Central Storage (Rajendra Place)</option>
+                            <option value="B03">B03 - City General Blood Bank (Pusa Road)</option>
+                        </select>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-group">
+                            <label class="form-label" for="appointment-date">Preferred Donation & Test Date</label>
+                            <input type="date" id="appointment-date" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="slot-time">Time Slot</label>
+                            <select id="slot-time" class="form-select">
+                                <option value="09:00 AM - 10:30 AM">09:00 AM - 10:30 AM</option>
+                                <option value="10:30 AM - 12:00 PM">10:30 AM - 12:00 PM</option>
+                                <option value="02:00 PM - 03:30 PM">02:00 PM - 03:30 PM</option>
+                                <option value="04:00 PM - 05:30 PM">04:00 PM - 05:30 PM</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Units to Donate</label>
+                        <div class="units-selector">
+                            <button type="button" class="unit-btn" onclick="selectUnits(this, 1)">1 Unit</button>
+                            <button type="button" class="unit-btn selected" onclick="selectUnits(this, 2)">2 Units</button>
+                            <button type="button" class="unit-btn" onclick="selectUnits(this, 3)">3 Units</button>
+                            <button type="button" class="unit-btn" onclick="selectUnits(this, 4)">4 Units</button>
+                        </div>
+                        <input type="hidden" id="selected-units" value="2">
+                    </div>
+
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:0.8rem; color:#475569;">
+                        <strong>✓ Pre-Donation Health Self-Check:</strong> Weight &ge; 50kg, Hb &ge; 12.5 g/dL, no alcohol in 24h, no recent infection/tattoo.
+                    </div>
+
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <button type="submit" class="submit-btn" id="submit-btn" style="background:linear-gradient(135deg, #1e293b, #0f172a);">
+                            <span>🗓️ Schedule Pre-Donation Test & Collection Date</span>
+                        </button>
+                        
+                        <button type="button" onclick="handleDonationSubmit(event, true)" class="submit-btn" id="express-btn" style="background:linear-gradient(135deg, #dc2626, #b91c1c);">
+                            <span>⚡ Instant Express Donation & Certificate (1-Click Demo)</span>
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Impact Certificate / Lifecycle Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📜 Donor Journey & Certificate</h2>
+                    <span style="font-size: 0.8rem; color:var(--text-muted);">Real-Time Output</span>
+                </div>
+
+                <div id="feedback-container">
+                    <div class="feedback-empty">
+                        <div class="feedback-empty-icon">🎖️</div>
+                        <h3>No Donation Registered Yet</h3>
+                        <p style="font-size:0.9rem; margin-top:0.5rem;">Schedule an appointment or run instant express donation to view your assigned lab screening test date, inventory updates, and voluntary donor certificate.</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Recent Voluntary Donations Feed -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">📋 Live Voluntary Donations & Scheduled Appointments</h2>
+                <button onclick="loadRecentDonations()" style="padding:0.4rem 0.8rem; border-radius:8px; border:1px solid var(--border); background:white; cursor:pointer; font-weight:600; font-size:0.85rem;">🔄 Refresh Feed</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Donation ID</th>
+                            <th>Donor Name</th>
+                            <th>Blood Group</th>
+                            <th>Units</th>
+                            <th>Status</th>
+                            <th>Assigned Test / Donation Date</th>
+                            <th>Facility</th>
+                            <th>Certificate ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-donations-tbody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading recent donations...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let totalDonationsCount = 14;
+        let totalUnitsAdded = 38;
+        let queueRequestsReducedCount = 11;
+
+        async function initPage() {
+            // Set default date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('appointment-date').value = tomorrow.toISOString().split('T')[0];
+
+            loadDonorBanks();
+            loadRecentDonations();
+        }
+
+        async function loadDonorBanks() {
+            try {
+                const res = await fetch('/donor/banks');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.banks && data.banks.length > 0) {
+                        const select = document.getElementById('target-bank');
+                        select.innerHTML = '';
+                        data.banks.forEach(b => {
+                            const opt = document.createElement('option');
+                            opt.value = b.bank_id;
+                            opt.textContent = `${b.bank_id} - ${b.name} (${b.address || 'Delhi NCR'})`;
+                            select.appendChild(opt);
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Error loading banks:", err);
+            }
+        }
+
+        function selectBloodGroup(btn, group) {
+            document.querySelectorAll('.blood-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('selected-blood-type').value = group;
+        }
+
+        function selectUnits(btn, units) {
+            document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('selected-units').value = units;
+        }
+
+        async function handleDonationSubmit(event, isExpress) {
+            if (event) event.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            const expressBtn = document.getElementById('express-btn');
+            
+            submitBtn.disabled = true;
+            expressBtn.disabled = true;
+
+            const payload = {
+                donor_name: document.getElementById('donor-name').value.trim(),
+                phone: document.getElementById('donor-phone').value.trim(),
+                email: document.getElementById('donor-email').value.trim(),
+                age: parseInt(document.getElementById('donor-age').value) || 25,
+                gender: document.getElementById('donor-gender').value,
+                blood_type: document.getElementById('selected-blood-type').value,
+                bank_id: document.getElementById('target-bank').value,
+                units: parseInt(document.getElementById('selected-units').value),
+                appointment_date: document.getElementById('appointment-date').value,
+                slot_time: document.getElementById('slot-time').value,
+                auto_complete: isExpress === true
+            };
+
+            try {
+                const response = await fetch('/donor/donate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    renderDonorJourney(result);
+                    
+                    if (result.donation_status === 'COMPLETED') {
+                        totalDonationsCount++;
+                        totalUnitsAdded += payload.units;
+                        queueRequestsReducedCount += result.total_requests_reduced || 0;
+                        
+                        document.getElementById('stat-total-donations').textContent = totalDonationsCount;
+                        document.getElementById('stat-units-added').textContent = totalUnitsAdded;
+                        document.getElementById('stat-queue-reduced').textContent = queueRequestsReducedCount;
+                        document.getElementById('stat-lives-saved').textContent = (totalUnitsAdded * 3);
+                    }
+
+                    loadRecentDonations();
+                } else {
+                    alert('Donation submission error: ' + (result.detail || 'Failed'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Network error submitting donation');
+            } finally {
+                submitBtn.disabled = false;
+                expressBtn.disabled = false;
+            }
+        }
+
+        async function triggerCompleteDonation(donationId) {
+            const btn = document.getElementById(`complete-btn-${donationId}`);
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⚙ Executing Assigned Lab Tests & Verifying Vitals...';
+            }
+
+            const hbLevel = parseFloat(document.getElementById(`hb-input-${donationId}`)?.value || 14.1);
+            const bpSys = parseInt(document.getElementById(`bp-sys-${donationId}`)?.value || 120);
+            const bpDia = parseInt(document.getElementById(`bp-dia-${donationId}`)?.value || 80);
+            const ttiPassed = document.getElementById(`tti-check-${donationId}`) ? document.getElementById(`tti-check-${donationId}`).checked : true;
+            const techName = document.getElementById(`tech-name-${donationId}`)?.value || "Dr. R. K. Sharma, MD Pathologist";
+
+            try {
+                const response = await fetch('/donor/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        donation_id: donationId,
+                        hb_level: hbLevel,
+                        bp_sys: bpSys,
+                        bp_dia: bpDia,
+                        tti_passed: ttiPassed,
+                        technician_name: techName
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    renderDonorJourney(result);
+
+                    totalDonationsCount++;
+                    totalUnitsAdded += (result.units_donated || 1);
+                    queueRequestsReducedCount += result.total_requests_reduced || 0;
+
+                    document.getElementById('stat-total-donations').textContent = totalDonationsCount;
+                    document.getElementById('stat-units-added').textContent = totalUnitsAdded;
+                    document.getElementById('stat-queue-reduced').textContent = queueRequestsReducedCount;
+                    document.getElementById('stat-lives-saved').textContent = (totalUnitsAdded * 3);
+
+                    loadRecentDonations();
+                } else {
+                    alert('Lab Screening Error: ' + (result.detail || 'Test verification failed'));
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '🔬 Retry Performing Assigned Lab Tests';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Network error completing lab test');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '🔬 Perform & Record Assigned Lab Tests';
+                }
+            }
+        }
+
+        function renderDonorJourney(res) {
+            const container = document.getElementById('feedback-container');
+            const isCompleted = res.donation_status === 'COMPLETED';
+
+            const appDate = res.appointment_date || new Date(Date.now() + 86400000).toISOString().split('T')[0];
+            const slotTime = res.slot_time || '10:00 AM - 11:30 AM';
+            const bankName = res.bank_name || 'RaktSetu Central Blood Bank';
+            const unitsCount = res.units_donated || res.units || 2;
+            const donorName = res.donor_name || 'Voluntary Donor';
+            const bloodType = res.blood_type || 'O-';
+
+            let affectedListHTML = '';
+            if (isCompleted && res.requests_affected && res.requests_affected.length > 0) {
+                affectedListHTML = res.requests_affected.map(r => `
+                    <div class="queue-impact-item" style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; margin-bottom:6px;">
+                        <div>
+                            <span class="req-tag" style="font-weight:700;">${r.request_id}</span>
+                            <span style="font-size:0.75rem; background:#fee2e2; color:#dc2626; padding:2px 6px; border-radius:4px; font-weight:700; margin-left:6px;">${(r.urgency || 'critical').toUpperCase()}</span>
+                        </div>
+                        <div style="font-size:0.8rem; font-weight:700; color:#15803d;">
+                            ✓ ${r.status}
+                        </div>
+                    </div>
+                `).join('');
+            } else if (isCompleted) {
+                affectedListHTML = `
+                    <div style="background:#f8fafc; padding:0.75rem; border-radius:8px; font-size:0.82rem; color:#64748b; text-align:center;">
+                        No active queue requests pending for <strong>${bloodType}</strong>. Units securely added to <strong>${bankName}</strong> emergency stock.
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div style="background:white; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:14px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span style="font-size:0.75rem; font-weight:800; color:#0284c7; letter-spacing:0.5px; text-transform:uppercase;">DONOR LIFECYCLE TRACKER</span>
+                        <span style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:12px; ${isCompleted ? 'background:#dcfce7; color:#15803d;' : 'background:#fef3c7; color:#b45309;'}">
+                            ${isCompleted ? '✓ DONATION COMPLETED' : '🗓️ APPOINTMENT SCHEDULED'}
+                        </span>
+                    </div>
+
+                    <!-- 5-Stage Journey Progress Bar -->
+                    <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px; margin-bottom:16px; text-align:center;">
+                        <div style="background:#dcfce7; border:1px solid #86efac; border-radius:8px; padding:6px 2px;">
+                            <div style="font-size:12px;">✓</div>
+                            <div style="font-size:9px; font-weight:700; color:#166534;">Form Submitted</div>
+                        </div>
+
+                        <div style="background:#dcfce7; border:1px solid #86efac; border-radius:8px; padding:6px 2px;">
+                            <div style="font-size:12px;">🗓️</div>
+                            <div style="font-size:9px; font-weight:700; color:#166534;">Test Date Assigned</div>
+                        </div>
+
+                        <div style="${isCompleted ? 'background:#dcfce7; border:1px solid #86efac;' : 'background:#fef3c7; border:1px solid #fde047;'} border-radius:8px; padding:6px 2px;">
+                            <div style="font-size:12px;">🧪</div>
+                            <div style="font-size:9px; font-weight:700; color:${isCompleted ? '#166534' : '#854d0e'};">Lab Screening</div>
+                        </div>
+
+                        <div style="${isCompleted ? 'background:#dcfce7; border:1px solid #86efac;' : 'background:#f1f5f9; border:1px solid #cbd5e1;'} border-radius:8px; padding:6px 2px;">
+                            <div style="font-size:12px;">📦</div>
+                            <div style="font-size:9px; font-weight:700; color:${isCompleted ? '#166534' : '#64748b'};">Inventory Credited</div>
+                        </div>
+
+                        <div style="${isCompleted ? 'background:#dcfce7; border:1px solid #86efac;' : 'background:#f1f5f9; border:1px solid #cbd5e1;'} border-radius:8px; padding:6px 2px;">
+                            <div style="font-size:12px;">🎓</div>
+                            <div style="font-size:9px; font-weight:700; color:${isCompleted ? '#166534' : '#64748b'};">Certificate</div>
+                        </div>
+                    </div>
+
+                    <!-- Details Card -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; font-size:0.85rem; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span style="color:#64748b;">Donation Reference ID:</span>
+                            <strong style="color:#dc2626;">${res.donation_id}</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span style="color:#64748b;">Donor Name:</span>
+                            <strong>${donorName}</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span style="color:#64748b;">Assigned Test & Collection Date:</span>
+                            <strong style="color:#0369a1;">${appDate} (${slotTime})</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <span style="color:#64748b;">Blood Bank Facility:</span>
+                            <strong>${bankName}</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span style="color:#64748b;">Blood Group & Units:</span>
+                            <strong style="color:#dc2626;">${bloodType} (${unitsCount} Units)</strong>
+                        </div>
+                    </div>
+
+                    ${!isCompleted ? `
+                        <!-- Interactive Laboratory Testing Execution Suite -->
+                        <div style="background:#fffbeb; border:1.5px solid #fde047; border-radius:12px; padding:14px; margin-bottom:12px;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                                <span style="font-size:1.2rem;">🔬</span>
+                                <strong style="font-size:0.9rem; color:#92400e;">Perform Assigned Laboratory Test Suite</strong>
+                            </div>
+                            <div style="font-size:0.8rem; color:#b45309; margin-bottom:12px;">
+                                Time Slot: <strong>${slotTime}</strong> on <strong>${appDate}</strong> at <strong>${bankName}</strong>.
+                            </div>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; background:white; padding:10px; border-radius:8px; border:1px solid #fef08a;">
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Hemoglobin (Hb) Count (g/dL)</label>
+                                    <input type="number" step="0.1" id="hb-input-${res.donation_id}" value="14.2" min="8" max="20" style="width:100%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; font-size:0.85rem;">
+                                    <span style="font-size:0.68rem; color:#16a34a; font-weight:600;">Threshold: ≥ 12.5 g/dL</span>
+                                </div>
+
+                                <div>
+                                    <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Blood Pressure (mmHg)</label>
+                                    <div style="display:flex; align-items:center; gap:4px;">
+                                        <input type="number" id="bp-sys-${res.donation_id}" value="120" style="width:50%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; font-size:0.85rem;">
+                                        <span>/</span>
+                                        <input type="number" id="bp-dia-${res.donation_id}" value="80" style="width:50%; padding:6px; border:1px solid #cbd5e1; border-radius:6px; font-weight:700; font-size:0.85rem;">
+                                    </div>
+                                    <span style="font-size:0.68rem; color:#64748b;">Normal Range: 120/80</span>
+                                </div>
+                            </div>
+
+                            <div style="background:white; padding:8px 10px; border-radius:8px; border:1px solid #fef08a; margin-bottom:12px;">
+                                <label style="display:flex; align-items:center; gap:8px; font-size:0.8rem; font-weight:700; color:#1e293b; cursor:pointer;">
+                                    <input type="checkbox" id="tti-check-${res.donation_id}" checked style="width:16px; height:16px; accent-color:#16a34a;">
+                                    <span>Transfusion-Transmitted Infections (TTI) Panel: Clear (HIV 1/2, Hepatitis B/C, Syphilis NEGATIVE)</span>
+                                </label>
+                            </div>
+
+                            <div style="margin-bottom:12px;">
+                                <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:2px;">Certifying Medical Officer / Technician</label>
+                                <input type="text" id="tech-name-${res.donation_id}" value="Dr. R. K. Sharma, MD Pathologist" style="width:100%; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.8rem; font-weight:600;">
+                            </div>
+
+                            <button id="complete-btn-${res.donation_id}" onclick="triggerCompleteDonation('${res.donation_id}')" style="width:100%; background:linear-gradient(135deg, #16a34a, #15803d); color:white; border:none; border-radius:8px; padding:10px; font-weight:700; font-size:0.88rem; cursor:pointer;">
+                                🧪 Perform & Record Assigned Lab Tests & Fulfill Donation
+                            </button>
+                        </div>
+                    ` : ''}
+
+                    ${isCompleted ? `
+                        <!-- Official Certificate Box -->
+                        <div id="cert-printable-area" style="border:3px double #d97706; background:linear-gradient(135deg, #fffbeb, #fef3c7); border-radius:12px; padding:18px; text-align:center; margin-top:10px; position:relative;">
+                            <div style="font-size:1.8rem; margin-bottom:4px;">🎖️</div>
+                            <div style="font-size:0.7rem; font-weight:800; color:#b45309; letter-spacing:1.5px; text-transform:uppercase;">NATIONAL BLOOD TRANSFUSION COUNCIL</div>
+                            <div style="font-size:1.2rem; font-weight:800; font-family:serif; color:#78350f; margin:4px 0 8px 0;">Official Voluntary Blood Donation Certificate</div>
+                            <div style="font-size:0.8rem; color:#92400e;">This is proudly presented to</div>
+                            <div style="font-size:1.3rem; font-weight:800; color:#b91c1c; margin:6px 0; font-family:sans-serif;">${donorName}</div>
+                            <div style="font-size:0.8rem; color:#78350f; line-height:1.5;">
+                                for voluntarily donating <strong>${unitsCount} Unit(s)</strong> of <strong>${bloodType}</strong> blood at <strong>${bankName}</strong> on <strong>${appDate}</strong>.
+                            </div>
+                            <div style="font-size:0.75rem; color:#92400e; margin-top:10px; border-top:1px dashed #fde047; padding-top:8px;">
+                                <strong>Lab Screening Status:</strong> ${res.lab_test_details || 'Passed'}<br>
+                                <strong>Certificate No:</strong> <span style="font-family:monospace; font-weight:800; color:#b91c1c;">${res.certificate_id}</span>
+                            </div>
+                            <div style="margin-top:12px;">
+                                <button onclick="window.print()" style="background:#b45309; color:white; border:none; border-radius:6px; padding:6px 14px; font-size:0.78rem; font-weight:700; cursor:pointer;">
+                                    🖨️ Print / Download Certificate
+                                </button>
+                            </div>
+                        </div>
+
+                        ${affectedListHTML ? `
+                            <div style="margin-top:14px;">
+                                <div style="font-size:0.8rem; font-weight:800; color:#1e293b; margin-bottom:6px;">⚡ Priority Queue Emergency Impact</div>
+                                ${affectedListHTML}
+                            </div>
+                        ` : ''}
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        async function loadRecentDonations() {
+            try {
+                const res = await fetch('/donor/donations/recent');
+                if (res.ok) {
+                    const data = await res.json();
+                    const tbody = document.getElementById('recent-donations-tbody');
+                    
+                    if (!data.donations || data.donations.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:1.5rem; color:var(--text-muted);">No voluntary donations logged yet today.</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = data.donations.map(d => {
+                        const isComp = d.status === 'COMPLETED';
+                        return `
+                            <tr>
+                                <td style="font-weight:700; color:var(--primary);">${d.donation_id}</td>
+                                <td style="font-weight:600;">${d.donor_name}</td>
+                                <td><span style="font-weight:800; background:#fee2e2; color:#dc2626; padding:0.2rem 0.5rem; border-radius:6px; font-size:0.8rem;">${d.blood_type}</span></td>
+                                <td style="font-weight:700;">${d.units} Unit(s)</td>
+                                <td>
+                                    <span style="font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:10px; ${isComp ? 'background:#dcfce7; color:#15803d;' : 'background:#fef3c7; color:#b45309;'}">
+                                        ${isComp ? '✓ COMPLETED' : '🗓️ SCHEDULED'}
+                                    </span>
+                                </td>
+                                <td style="font-size:0.82rem; color:#0369a1; font-weight:600;">${d.appointment_date || 'N/A'} (${d.slot_time || '10:00 AM'})</td>
+                                <td>${d.bank_name || 'LifeBlood Bank'}</td>
+                                <td style="font-family:monospace; font-size:0.8rem; font-weight:700; color:${isComp ? '#b91c1c' : '#94a3b8'};">
+                                    ${d.certificate_id || (isComp ? 'Issued' : 'Pending Test')}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
+            } catch (err) {
+                console.error("Error fetching recent donations:", err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initPage);
+    </script>
+</body>
+</html>
